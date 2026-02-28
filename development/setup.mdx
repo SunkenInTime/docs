@@ -1,0 +1,186 @@
+---
+title: Setup
+description: Setting up your development environment for Icarus
+---
+
+This guide will help you set up your development environment to contribute to Icarus.
+
+## Prerequisites
+
+### FVM (Flutter Version Management)
+
+Icarus uses FVM to pin the Flutter version. **FVM is required** - the project is pinned to Flutter `3.38.4` via `.fvmrc`.
+
+Install FVM:
+
+```bash
+dart pub global activate fvm
+```
+
+Always prefix Flutter and Dart commands with `fvm`:
+
+```bash
+fvm flutter run
+fvm dart run build_runner build
+```
+
+### Platform-Specific Dependencies
+
+<Tabs>
+  <Tab title="Linux">
+    Install the required build dependencies:
+
+    ```bash
+    sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev
+    ```
+
+    Install XDG user directories (required by `path_provider` plugin):
+
+    ```bash
+    sudo apt-get install -y xdg-user-dirs
+    xdg-user-dirs-update
+    ```
+
+    <Warning>
+      If you skip the XDG setup, the app will crash with `MissingPlatformDirectoryException`.
+    </Warning>
+  </Tab>
+  <Tab title="Windows">
+    Ensure you have:
+
+    - Visual Studio 2022 with Desktop development with C++ workload
+    - Windows 10 SDK
+
+    For MSIX builds, you'll also need:
+
+    ```bash
+    dart pub global activate msix
+    ```
+  </Tab>
+  <Tab title="macOS">
+    Install Xcode from the Mac App Store.
+
+    Install CocoaPods:
+
+    ```bash
+    sudo gem install cocoapods
+    ```
+  </Tab>
+</Tabs>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/yourusername/icarus.git
+    cd icarus
+    ```
+  </Step>
+
+  <Step title="Install Flutter version via FVM">
+    FVM will read the `.fvmrc` file and install the correct Flutter version:
+
+    ```bash
+    fvm install
+    fvm use 3.38.4
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    fvm flutter pub get
+    ```
+  </Step>
+
+  <Step title="Generate code">
+    Icarus uses code generation for Hive adapters, Riverpod providers, and JSON serialization:
+
+    ```bash
+    fvm flutter pub run build_runner build --delete-conflicting-outputs
+    ```
+
+    <Info>
+      Run this command whenever you modify Hive models, Riverpod providers, or JSON-serializable classes.
+    </Info>
+  </Step>
+</Steps>
+
+## Running the App
+
+### Linux
+
+```bash
+fvm flutter run -d linux
+```
+
+### Windows
+
+```bash
+fvm flutter run -d windows
+```
+
+### macOS
+
+```bash
+fvm flutter run -d macos
+```
+
+## Development Workflow
+
+### Linting
+
+Run the analyzer to check for issues:
+
+```bash
+fvm flutter analyze
+```
+
+<Note>
+  Expect ~70 pre-existing warnings/infos (unused imports, deprecated APIs). There should be no errors.
+</Note>
+
+### Code Generation
+
+After making changes to models or providers, regenerate code:
+
+```bash
+fvm flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+### Hot Reload
+
+Flutter supports hot reload during development. Press `r` in the terminal where you ran `flutter run` to hot reload changes.
+
+## Testing
+
+<Warning>
+  No automated tests currently exist in this codebase. Running `fvm flutter test` will find nothing.
+</Warning>
+
+## Troubleshooting
+
+### MissingPlatformDirectoryException (Linux)
+
+If the app crashes on Linux with this exception, install XDG user directories:
+
+```bash
+sudo apt-get install -y xdg-user-dirs
+xdg-user-dirs-update
+```
+
+### Build Runner Conflicts
+
+If you encounter conflicts during code generation, use the `--delete-conflicting-outputs` flag:
+
+```bash
+fvm flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+### FVM Not Found
+
+Ensure FVM is in your PATH:
+
+```bash
+export PATH="$PATH:$HOME/.pub-cache/bin"
+```

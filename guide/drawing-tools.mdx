@@ -1,0 +1,116 @@
+---
+title: Drawing tools
+description: Use drawing tools to illustrate movement, positioning, and tactics
+---
+
+## Drawing mode
+
+Drawing mode lets you freehand draw lines and arrows on the map to show movement paths, sightlines, and tactical information.
+
+### Activating drawing mode
+
+Switch to drawing mode in any of these ways:
+
+- Press `Q` to toggle drawing mode on/off
+- Click the drawing tool button in the toolbar
+- Press `S` to return to navigation mode
+
+<Note>
+  When drawing mode is active, clicking and dragging on the map will create drawings instead of panning the view.
+</Note>
+
+### Creating drawings
+
+<Steps>
+  <Step title="Enter drawing mode">
+    Press `Q` or click the drawing tool icon.
+  </Step>
+  
+  <Step title="Draw on the map">
+    Click and drag your mouse to create freehand lines. The drawing follows your cursor smoothly.
+  </Step>
+  
+  <Step title="Release to finish">
+    Release the mouse button to complete the drawing. The line is automatically smoothed using the Douglas-Peucker algorithm.
+  </Step>
+</Steps>
+
+### Drawing properties
+
+Customize your drawings with these options:
+
+- **Color**: Select from the color picker to match different team roles or action types
+- **Line style**: Toggle between solid and dotted lines
+- **Arrow heads**: Add arrows to indicate direction of movement
+
+<Tip>
+  Use different colors consistently throughout your strategy. For example, use yellow for entry fraggers, blue for support players, and red for enemy positions.
+</Tip>
+
+## Technical details
+
+The drawing system uses coordinate normalization:
+
+- Drawings are stored in normalized coordinates (0-1000 height, aspect-adjusted width)
+- Paths are rebuilt when zooming to maintain visual quality
+- Smoothing reduces point count while preserving shape
+- Bounding boxes enable efficient eraser collision detection
+
+### Path smoothing
+
+When you finish a drawing, Icarus simplifies the path:
+
+1. Raw input points are collected as you draw
+2. The Douglas-Peucker algorithm reduces points (epsilon: 1.4)
+3. The simplified path is rebuilt using quadratic Bezier curves
+4. For single points, a small circle is rendered
+
+## Eraser tool
+
+Remove unwanted drawings with the eraser tool.
+
+### Using the eraser
+
+<Steps>
+  <Step title="Activate eraser mode">
+    Press `W` to toggle eraser mode on/off.
+  </Step>
+  
+  <Step title="Erase drawings">
+    Click and drag over any drawing to erase it. The eraser detects line segments within its radius.
+  </Step>
+  
+  <Step title="Return to normal mode">
+    Press `W` again or press `S` to return to navigation mode.
+  </Step>
+</Steps>
+
+The eraser uses line segment distance calculations to detect which drawings to remove:
+
+- Checks if the bounding box is within eraser range
+- Calculates distance to each line segment
+- Removes entire drawing if any segment is within eraser radius
+- Eraser radius is configurable in settings
+
+<Tip>
+  The eraser removes entire drawing strokes, not just parts of them. If you need to modify a line, erase it and redraw.
+</Tip>
+
+## Undo and redo
+
+All drawing actions support undo/redo:
+
+- **Undo**: Press `Ctrl+Z` (Windows/Linux) or `Cmd+Z` (Mac)
+- **Redo**: Press `Ctrl+Shift+Z` or `Cmd+Shift+Z`
+
+Drawing actions are tracked independently from other elements like agents and abilities.
+
+## Interaction states
+
+Icarus uses distinct interaction states:
+
+- **Navigation**: Default mode for panning and selecting elements
+- **Drawing**: Active when creating freehand drawings
+- **Erasing**: Active when removing drawings
+
+Only one state can be active at a time. Switching states updates the cursor and interaction behavior.

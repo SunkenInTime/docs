@@ -1,0 +1,337 @@
+---
+title: State Management
+description: Riverpod provider architecture and state management patterns in Icarus
+---
+
+## Overview
+
+Icarus uses [Riverpod](https://riverpod.dev/) for state management across the application. The provider architecture follows a multi-page document model where each strategy contains multiple pages, and each page holds its own set of placed elements (agents, abilities, drawings, etc.).
+
+## Provider Architecture
+
+### Core Strategy Provider
+
+The `StrategyProvider` manages the overall strategy state and coordinates between different element providers.
+
+**Location:** `lib/providers/strategy_provider.dart:172-186`
+
+```dart
+final strategyProvider =
+    NotifierProvider<StrategyProvider, StrategyState>(StrategyProvider.new);
+
+class StrategyProvider extends Notifier<StrategyState> {
+  String? activePageID;
+
+  @override
+  StrategyState build() {
+    return StrategyState(
+      isSaved: false,
+      stratName: null,
+      id: "testID",
+      storageDirectory: null,
+    );
+  }
+}
+```
+
+<ParamField path="activePageID" type="String?">
+  The ID of the currently active page being edited. Null when no page is loaded.
+</ParamField>
+
+### Strategy State
+
+**Location:** `lib/providers/strategy_provider.dart:144-170`
+
+<ResponseField name="isSaved" type="bool">
+  Indicates whether the current strategy has unsaved changes
+</ResponseField>
+
+<ResponseField name="stratName" type="String?">
+  The name of the current strategy, or null if no strategy is loaded
+</ResponseField>
+
+<ResponseField name="id" type="String">
+  Unique identifier for the current strategy
+</ResponseField>
+
+<ResponseField name="storageDirectory" type="String?">
+  File system path where strategy images and assets are stored
+</ResponseField>
+
+## Element Providers
+
+Each type of placeable element has its own dedicated provider that manages state for that element type.
+
+### Agent Provider
+
+**Location:** `lib/providers/agent_provider.dart:13-14`
+
+```dart
+final agentProvider =
+    NotifierProvider<AgentProvider, List<PlacedAgent>>(AgentProvider.new);
+```
+
+Manages all placed agents on the current page. Provides methods for:
+
+- `addAgent(PlacedAgent)` - Add a new agent to the canvas
+- `removeAgent(String id)` - Remove an agent by ID
+- `updatePosition(Offset, String id)` - Update agent position
+- `toggleAgentState(String id)` - Toggle between alive/dead states
+- `switchSides()` - Mirror all agents when switching attack/defend
+
+### Ability Provider
+
+**Location:** `lib/providers/ability_provider.dart:14-15`
+
+```dart
+final abilityProvider =
+    NotifierProvider<AbilityProvider, List<PlacedAbility>>(AbilityProvider.new);
+```
+
+Manages placed abilities with support for rotation and length adjustments:
+
+- `addAbility(PlacedAbility)` - Add a new ability
+- `updatePosition(Offset, String id)` - Update ability position
+- `updateRotation(int index, double rotation, double length)` - Adjust ability direction and range
+- `switchSides()` - Mirror abilities when switching sides
+
+### Drawing Provider
+
+**Location:** `lib/providers/drawing_provider.dart:61-62`
+
+```dart
+final drawingProvider =
+    NotifierProvider<DrawingProvider, DrawingState>(DrawingProvider.new);
+```
+
+Manages free-hand drawings and lines. The provider maintains a `DrawingState` that includes:
+
+<ResponseField name="elements" type="List<DrawingElement>">
+  All completed drawing elements on the page
+</ResponseField>
+
+<ResponseField name="currentElement" type="DrawingElement?">
+  The drawing currently being created (null when not actively drawing)
+</ResponseField>
+
+<ResponseField name="updateCounter" type="int">
+  Incremented to trigger repaints when drawings change
+</ResponseField>
+
+**Key methods:**
+
+- `startFreeDrawing(Offset, CoordinateSystem, Color, bool isDotted, bool hasArrow)` - Begin a new drawing
+- `updateFreeDrawing(Offset, CoordinateSystem)` - Add points to current drawing
+- `finishFreeDrawing(Offset?, CoordinateSystem)` - Complete and simplify the drawing using Douglas-Peucker algorithm
+- `onErase(Offset)` - Remove drawings near the cursor
+- `rebuildAllPaths(CoordinateSystem)` - Reconstruct all drawing paths (called after zoom/pan changes)
+
+### Map Provider
+
+**Location:** `lib/providers/map_provider.dart:12`
+
+```dart
+final mapProvider = NotifierProvider<MapProvider, MapState>(MapProvider.new);
+```
+
+<ResponseField name="currentMap" type="MapValue">
+  The selected Valorant map (Ascent, Bind, Haven, etc.)
+</ResponseField>
+
+<ResponseField name="isAttack" type="bool">
+  Whether the strategy is for attacking or defending side
+</ResponseField>
+
+<ResponseField name="showSpawnBarrier" type="bool">
+  Toggle visibility of spawn barriers on the map
+</ResponseField>
+
+<ResponseField name="showUltOrbs" type="bool">
+  Toggle visibility of ultimate orbs
+</ResponseField>
+
+<ResponseField name="showRegionNames" type="bool">
+  Toggle visibility of site/region names
+</ResponseField>
+
+### Folder Provider
+
+**Location:** `lib/providers/folder_provider.dart:115-116`
+
+```dart
+final folderProvider =
+    NotifierProvider<FolderProvider, String?>(FolderProvider.new);
+```
+
+Manages the folder hierarchy for organizing strategies. The state holds the currently selected folder ID (null for root).
+
+## Page Management
+
+Strategies can contain multiple pages, each with its own set of elements. The active page determines which elements are currently visible and editable.
+
+### Switching Pages
+
+**Location:** `lib/providers/strategy_provider.dart:481-524`
+
+```dart
+Future<void> setActivePage(String pageID) async {
+  if (pageID == activePageID) return;
+
+  // Flush current page before switching
+  await _syncCurrentPageToHive();
+
+  final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+  final doc = box.get(state.id);
+  if (doc == null) return;
+
+  final page = doc.pages.firstWhere(
+    (p) => p.id == pageID,
+    orElse: () => doc.pages.first,
+  );
+
+  activePageID = page.id;
+  ref.read(actionProvider.notifier).clearAllActions();
+  
+  // Hydrate all providers from page data
+  ref.read(agentProvider.notifier).fromHive(page.agentData);
+  ref.read(abilityProvider.notifier).fromHive(page.abilityData);
+  ref.read(drawingProvider.notifier).fromHive(page.drawingData);
+  // ... etc for all element types
+}
+```
+
+The page-switching process:
+
+1. **Flush current page** - Save all provider state to the current page in Hive
+2. **Clear undo/redo** - Reset action history
+3. **Load new page** - Hydrate all providers from the target page's data
+4. **Rebuild paths** - Reconstruct any coordinate-dependent elements
+
+### Adding Pages
+
+**Location:** `lib/providers/strategy_provider.dart:674-710`
+
+```dart
+Future<void> addPage([String? name]) async {
+  final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+  
+  await _syncCurrentPageToHive();
+  
+  final strat = box.get(state.id);
+  if (strat == null) return;
+
+  name ??= "Page ${strat.pages.length + 1}";
+  
+  final newPage = strat.pages.last.copyWith(
+    id: const Uuid().v4(),
+    name: name,
+    sortIndex: strat.pages.length,
+  );
+
+  final updated = strat.copyWith(
+    pages: [...strat.pages, newPage],
+    lastEdited: DateTime.now(),
+  );
+  await box.put(updated.id, updated);
+
+  await setActivePageAnimated(newPage.id);
+}
+```
+
+## Auto-Save System
+
+The strategy provider implements an automatic save system with debouncing to prevent excessive writes.
+
+**Location:** `lib/providers/strategy_provider.dart:198-239`
+
+```dart
+Timer? _saveTimer;
+bool _saveInProgress = false;
+bool _pendingSave = false;
+
+void setUnsaved() async {
+  state = state.copyWith(isSaved: false);
+  _saveTimer?.cancel();
+  _saveTimer = Timer(Settings.autoSaveOffset, () async {
+    if (state.stratName == null) return;
+    await _performSave(state.id);
+  });
+}
+
+Future<void> _performSave(String id) async {
+  if (_saveInProgress) {
+    _pendingSave = true;
+    return;
+  }
+
+  _saveInProgress = true;
+  try {
+    ref.read(autoSaveProvider.notifier).ping();
+    await saveToHive(id);
+  } finally {
+    _saveInProgress = false;
+    if (_pendingSave) {
+      _pendingSave = false;
+    }
+  }
+}
+```
+
+<ParamField path="autoSaveOffset" type="Duration" default="15 seconds">
+  Delay before triggering an auto-save after the last edit (defined in `Settings.autoSaveOffset`)
+</ParamField>
+
+## Undo/Redo System
+
+All element providers track their history through the `ActionProvider`. Each modification creates a `UserAction` that can be undone or redone.
+
+**Action Types:**
+
+<ResponseField name="addition" type="ActionType">
+  A new element was added to the canvas
+</ResponseField>
+
+<ResponseField name="deletion" type="ActionType">
+  An element was removed from the canvas
+</ResponseField>
+
+<ResponseField name="edit" type="ActionType">
+  An existing element was modified (position, rotation, etc.)
+</ResponseField>
+
+**Action Groups:**
+
+Each action is tagged with a group identifier: `agent`, `ability`, `drawing`, `text`, `image`, or `utility`. This allows the appropriate provider to handle the undo/redo operation.
+
+## State Persistence
+
+All provider state is persisted to Hive when saving. The `_syncCurrentPageToHive()` method collects state from all element providers and writes it to the active page.
+
+**Location:** `lib/providers/strategy_provider.dart:1257-1289`
+
+```dart
+Future<void> _syncCurrentPageToHive() async {
+  final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+  final strat = box.get(state.id);
+  if (strat == null || strat.pages.isEmpty) return;
+
+  final pageId = activePageID ?? strat.pages.first.id;
+  final idx = strat.pages.indexWhere((p) => p.id == pageId);
+  if (idx == -1) return;
+
+  final updatedPage = strat.pages[idx].copyWith(
+    drawingData: ref.read(drawingProvider).elements,
+    agentData: ref.read(agentProvider),
+    abilityData: ref.read(abilityProvider),
+    textData: ref.read(textProvider),
+    imageData: ref.read(placedImageProvider).images,
+    utilityData: ref.read(utilityProvider),
+    isAttack: ref.read(mapProvider).isAttack,
+    settings: ref.read(strategySettingsProvider),
+  );
+
+  final newPages = [...strat.pages]..[idx] = updatedPage;
+  final updated = strat.copyWith(pages: newPages, lastEdited: DateTime.now());
+  await box.put(updated.id, updated);
+}
+```

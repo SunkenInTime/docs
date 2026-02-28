@@ -1,0 +1,163 @@
+---
+title: Keyboard shortcuts
+description: Master Icarus keyboard shortcuts to speed up your workflow
+---
+
+## Global shortcuts
+
+These shortcuts work throughout the application:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Ctrl+Z` / `Cmd+Z` | Undo | Undo the last action (drawing, placement, deletion) |
+| `Ctrl+Shift+Z` / `Cmd+Shift+Z` | Redo | Redo the previously undone action |
+| `F12` | Debug dialog | Open the in-app debug dialog (developer feature) |
+| `Ctrl+V` / `Cmd+V` | Paste image | Paste an image from clipboard |
+
+<Note>
+  `Ctrl` shortcuts are for Windows and Linux. `Cmd` shortcuts are for macOS. Icarus detects your platform automatically.
+</Note>
+
+## Interaction modes
+
+Switch between different interaction states:
+
+| Shortcut | Mode | Description |
+|----------|------|-------------|
+| `S` | Navigation | Switch to navigation mode for panning and selecting |
+| `Q` | Drawing | Toggle drawing mode on/off for freehand drawing |
+| `W` | Erasing | Toggle eraser mode on/off to remove drawings |
+| `T` | Add text | Create a new text element at the center of the view |
+
+### Interaction state priority
+
+Only one interaction state can be active at a time:
+
+1. Press `Q` to enter drawing mode (overrides previous state)
+2. Press `W` to enter erasing mode (overrides previous state)
+3. Press `S` to return to navigation mode (default state)
+
+<Tip>
+  Use `S` as a quick way to exit any special mode and return to normal navigation.
+</Tip>
+
+## Page navigation
+
+Quickly move between strategy pages:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `A` | Forward page | Go to the next page (wraps to first page at the end) |
+| `D` | Backward page | Go to the previous page (wraps to last page at the start) |
+
+### Page navigation behavior
+
+- Pages are navigated in sort order
+- Switching pages triggers animated transitions
+- The current page is saved before switching
+- Forward and backward wrap around the page list
+
+<Note>
+  Page shortcuts use `A` and `D` instead of arrow keys to avoid conflicts when editing text fields.
+</Note>
+
+## Widget shortcuts
+
+These shortcuts apply to selected elements:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `E` | Delete widget | Delete the currently selected element |
+
+<Tip>
+  Select an agent, ability, text, or utility element, then press `E` to quickly remove it.
+</Tip>
+
+## Text editing overrides
+
+When editing text fields, these shortcuts are disabled to allow normal text input:
+
+- `T` - Allows typing the letter "t"
+- `A` - Allows typing the letter "a"
+- `D` - Allows typing the letter "d"
+- `Q` - Allows typing the letter "q"
+- `W` - Allows typing the letter "w"
+- `S` - Allows typing the letter "s"
+- `Ctrl+Z` / `Cmd+Z` - Handled by text field for undo
+- `Enter` - Submits the text field
+
+These overrides are automatically applied when a text field has focus.
+
+<Warning>
+  If shortcuts don't work as expected, check if a text field is focused. Click outside the text field to deactivate it.
+</Warning>
+
+## Shortcut customization
+
+Currently, keyboard shortcuts are hardcoded and cannot be customized. The shortcuts are defined in:
+
+- `globalShortcuts` - Work throughout the app
+- `widgetShortcuts` - Work on selected elements
+- `textEditingOverrides` - Override global shortcuts during text entry
+
+## Platform differences
+
+### Windows and Linux
+
+- Use `Ctrl` as the modifier key
+- Standard keyboard layout support
+
+### macOS
+
+- Use `Cmd` (Command) as the modifier key
+- `Ctrl` is treated separately and not used for main shortcuts
+
+### Keyboard detection
+
+Icarus uses Flutter's `LogicalKeyboardKey` system:
+
+- Platform-agnostic key detection
+- Support for international keyboard layouts
+- Handles both `control` and `meta` keys appropriately
+
+<Tip>
+  If you're on a non-standard keyboard layout, shortcuts use logical keys (what the key represents) rather than physical keys (where the key is located).
+</Tip>
+
+## Undo/Redo details
+
+The undo/redo system tracks actions across different element types:
+
+- **Drawings**: Addition and deletion of freehand strokes
+- **Agents**: Placement and removal of agent icons
+- **Abilities**: Placement and removal of ability markers
+- **Text**: Addition and removal of text elements
+- **Utilities**: Placement and removal of utility markers
+
+Each action group maintains its own history, but undo/redo commands work chronologically across all groups.
+
+### Action tracking
+
+When you perform an action:
+
+1. The action is recorded with a type, ID, and group
+2. The action is added to the undo stack
+3. Pressing undo removes the action from history and reverts it
+4. Pressing redo reapplies the most recent undone action
+
+<Note>
+  Switching pages does not clear undo history for the current page. However, undo/redo does not work across pages.
+</Note>
+
+## Accessibility
+
+Keyboard shortcuts improve accessibility:
+
+- No mouse required for common actions
+- Single-key shortcuts for mode switching
+- Consistent modifier key usage
+- Visual feedback for active modes
+
+<Tip>
+  Learn the mode shortcuts (`S`, `Q`, `W`) to dramatically speed up your workflow without reaching for the mouse.
+</Tip>

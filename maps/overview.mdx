@@ -1,0 +1,80 @@
+---
+title: Maps Overview
+description: Learn how maps work in Icarus and their role in strategy creation
+---
+
+## How Maps Work in Icarus
+
+Maps are the foundation of strategy creation in Icarus. Each Valorant map is represented with high-fidelity SVG assets that include multiple layers for different views and information.
+
+## Map Components
+
+Every map in Icarus includes several asset layers:
+
+- **Base Map** - The core map layout showing the terrain and structure
+- **Callouts** - Location names and callout positions
+- **Spawn Walls** - Barrier locations at round start
+- **Ult Orbs** - Ultimate orb spawn locations
+- **Attack/Defense Views** - Separate perspectives for each side
+
+## Map Selection
+
+When creating strategies, you can:
+
+1. Select any map from the available rotation
+2. Choose between Attack and Defense perspectives
+3. Switch between sides using the sword/shield toggle
+4. Access maps that are out of rotation for legacy strategies
+
+## Map Scaling
+
+Each map has a custom scale factor to ensure consistent strategy visualization across different map sizes:
+
+```dart
+MapValue.ascent: 1.0
+MapValue.breeze: 1.02
+MapValue.lotus: 1.25
+MapValue.icebox: 1.05
+MapValue.split: 1.18
+MapValue.haven: 1.09
+MapValue.fracture: 1.0
+MapValue.pearl: 1.185
+MapValue.abyss: 1.167
+MapValue.sunset: 1.048
+MapValue.bind: 0.835
+MapValue.corrode: 0.985
+```
+
+## Interactive Features
+
+On the map canvas, you can:
+
+- **Zoom and Pan** - Navigate the map with mouse controls
+- **Place Agents** - Drag agent icons onto positions
+- **Draw Utilities** - Add ability lineups and utility usage
+- **Add Annotations** - Insert text, images, and custom drawings
+- **Layer Elements** - Combine multiple elements for complex strategies
+
+## Map Rotation
+
+Icarus tracks which maps are currently in the competitive rotation versus those that are out of play. This helps you focus on relevant maps while maintaining access to legacy content.
+
+### Currently Available
+
+Maps in the current rotation are prominently displayed in the map selector.
+
+### Out of Rotation
+
+Maps that have been removed from competitive play are grouped separately but remain accessible for viewing historical strategies.
+
+## Technical Details
+
+Maps are stored as SVG assets in the `assets/maps/` directory with the following naming convention:
+
+- `{mapname}_map.svg` - Attack side base map
+- `{mapname}_map_defense.svg` - Defense side base map  
+- `{mapname}_call_outs.svg` - Attack side callouts
+- `{mapname}_call_outs_defense.svg` - Defense side callouts
+- `{mapname}_spawn_walls.svg` - Barrier locations
+- `{mapname}_ult_orbs.svg` - Ultimate orb positions
+- `thumbnails/{mapname}_thumbnail.webp` - Map preview image

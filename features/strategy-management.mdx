@@ -1,0 +1,259 @@
+---
+title: Strategy management
+description: Create, save, and organize your Valorant strategies
+---
+
+Icarus provides comprehensive strategy management including multi-page support, folder organization, and file import/export.
+
+## Creating strategies
+
+<Steps>
+  <Step title="Create a new strategy">
+    Click "New Strategy" and provide a name. A new strategy is created with:
+    - A unique ID
+    - One default page ("Page 1")
+    - The Ascent map selected by default
+    - Current timestamp for creation and last edited dates
+  </Step>
+  
+  <Step title="Select your map">
+    Choose the Valorant map for your strategy. The map can be changed later if needed.
+  </Step>
+  
+  <Step title="Set attack or defense">
+    Toggle between attacking and defending side. This affects:
+    - The default map view orientation
+    - Spawn position context
+    - Site labels (A/B/C)
+  </Step>
+</Steps>
+
+## Multi-page strategies
+
+Each strategy can contain multiple pages to break down complex setups:
+
+### Adding pages
+
+<Steps>
+  <Step title="Click Add Page">
+    Creates a new page with all elements from the current page copied over.
+  </Step>
+  
+  <Step title="Name the page">
+    Give it a descriptive name like "Initial Setup", "Post-plant", or "Retake".
+  </Step>
+  
+  <Step title="Modify the page">
+    Edit agents, abilities, drawings, and lineups independently.
+  </Step>
+</Steps>
+
+### Navigating pages
+
+Switch between pages using:
+
+- **Arrow keys** - Navigate forward/backward through pages
+- **Page list** - Click directly on the page you want to view
+- **Keyboard shortcuts** - Use configured hotkeys for quick navigation
+
+<Note>
+  Pages are ordered by their `sortIndex`. You can reorder pages by dragging them in the page list.
+</Note>
+
+### Page transitions
+
+When switching pages, Icarus animates the transition:
+
+- Elements that move show smooth position changes
+- New elements fade in
+- Removed elements fade out
+- Unchanged elements remain visible during the transition
+
+## Auto-save
+
+Icarus automatically saves your work:
+
+- **Save timer** - Triggered after a configurable delay (default: a few seconds after edits)
+- **Save indicator** - Shows "Saving..." while the save is in progress
+- **Debouncing** - Multiple rapid edits are coalesced into a single save
+
+<Warning>
+  Auto-save only works for strategies that have been saved at least once. Unsaved strategies need to be manually saved first.
+</Warning>
+
+### Manual save
+
+You can force an immediate save:
+
+1. Use the Save button in the toolbar
+2. Press the save keyboard shortcut
+3. Export the strategy to a file
+
+## Importing strategies
+
+Icarus supports importing from `.ica` files:
+
+<Steps>
+  <Step title="Select import method">
+    - **File picker** - Browse and select an `.ica` file
+    - **Drag and drop** - Drop files directly onto the app window
+    - **File path** - Provide a direct path (useful for automation)
+  </Step>
+  
+  <Step title="Load strategy data">
+    Icarus reads the file and extracts:
+    - Strategy metadata (name, map, creation date)
+    - All pages with their content
+    - Embedded images (if the file is a ZIP)
+    - Version information for migration
+  </Step>
+  
+  <Step title="Automatic migration">
+    Legacy strategies are automatically upgraded to the current format, including:
+    - Converting single-page strategies to multi-page
+    - Migrating to 16:9 world coordinates
+    - Updating ability positions if the version is outdated
+  </Step>
+</Steps>
+
+<Note>
+  ZIP-based `.ica` files (created by newer versions) include embedded images. Legacy JSON-only files will try to load images from a separate folder.
+</Note>
+
+## Exporting strategies
+
+Export your strategies to share with teammates:
+
+### Single strategy export
+
+<Steps>
+  <Step title="Click Export">
+    Choose "Export Strategy" from the menu.
+  </Step>
+  
+  <Step title="Select location">
+    Pick where to save the `.ica` file.
+  </Step>
+  
+  <Step title="File is created">
+    Icarus generates a ZIP archive containing:
+    - Strategy JSON with all pages
+    - All embedded images
+    - Metadata and version information
+  </Step>
+</Steps>
+
+### Folder export
+
+You can export an entire folder:
+
+1. All strategies in the folder are exported
+2. Subfolders are included recursively
+3. A single ZIP file contains the folder hierarchy
+
+## Strategy operations
+
+### Renaming
+
+Change the strategy name anytime. The internal ID remains the same, ensuring references stay valid.
+
+### Duplicating
+
+<Steps>
+  <Step title="Select duplicate">
+    Right-click a strategy and choose "Duplicate".
+  </Step>
+  
+  <Step title="New copy is created">
+    A new strategy is created with:
+    - New unique ID
+    - All pages copied with new IDs
+    - "(Copy)" appended to the name
+    - Same folder location
+  </Step>
+</Steps>
+
+### Deleting
+
+Deleting a strategy:
+
+- Removes it from the Hive database
+- Deletes the strategy's storage folder (including images)
+- Cannot be undone
+
+<Warning>
+  Strategy deletion is permanent. Consider exporting a backup before deleting important strategies.
+</Warning>
+
+## Version migration
+
+Icarus includes automatic migration for older strategy files:
+
+### Legacy data migration
+
+Strategies created before multi-page support are converted:
+
+1. Old flat data structure is wrapped into a single page
+2. All drawings, agents, abilities, and text are moved to "Page 1"
+3. Version number is updated to current
+
+### World coordinate migration
+
+Older strategies used 1.24:1 aspect ratio. Modern strategies use 16:9:
+
+1. All positions are shifted horizontally to center the map
+2. Drawings, agents, abilities, utilities, and lineups are adjusted
+3. Bounding boxes are recalculated
+
+<Note>
+  Migration happens automatically when loading or switching pages. The updated strategy is saved immediately.
+</Note>
+
+## Storage structure
+
+Strategies are stored in two places:
+
+### Hive database
+
+The main strategy data (metadata, pages, element positions) is stored in a local Hive database:
+
+- Fast access for listing strategies
+- Efficient querying for folder organization
+- Atomic updates for reliability
+
+### File system
+
+Images and large media are stored in the application support directory:
+
+```
+<app_support>/
+  <strategy_id>/
+    images/
+      <image_id>.<ext>
+      ...
+```
+
+Unused images are cleaned up when loading a strategy.
+
+## Best practices
+
+<Tip>
+  Use descriptive page names that indicate the round phase or scenario:
+  - "Round Start - Default"
+  - "Post-Plant - A Site"
+  - "Retake - 3v4"
+  - "Eco Round - B Split"
+</Tip>
+
+### Organization
+
+- Group related strategies in folders
+- Use consistent naming conventions
+- Export important strategies regularly as backups
+- Delete unused strategies to keep the library clean
+
+### Performance
+
+- Strategies with many pages may take longer to switch
+- Large images increase file size
+- Clean up unused lineups and images periodically

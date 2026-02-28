@@ -1,0 +1,306 @@
+---
+title: Lineups
+description: Create and document precise ability lineups with images, notes, and YouTube links
+---
+
+Lineups are specialized markers that pair an agent position with an ability target, along with supporting media and notes. They're perfect for documenting Sova darts, Viper smokes, Brimstone mollies, and other precise ability placements.
+
+## Creating a lineup
+
+<Steps>
+  <Step title="Enter lineup mode">
+    Click the "Lineup" tool in the toolbar. The canvas enters lineup placement mode.
+  </Step>
+  
+  <Step title="Place the agent">
+    Click where the agent should stand. Select the agent type from the sidebar.
+  </Step>
+  
+  <Step title="Place the ability">
+    Click where the ability should land or be aimed. Select the matching ability for the agent.
+  </Step>
+  
+  <Step title="Add details">
+    Optionally add:
+    - **Images** - Screenshots showing crosshair placement or reference points
+    - **YouTube link** - A video demonstrating the lineup
+    - **Notes** - Text instructions (e.g., "crouch jump", "aim at corner of box")
+  </Step>
+  
+  <Step title="Save the lineup">
+    The lineup is saved with a unique ID and appears on the map.
+  </Step>
+</Steps>
+
+<Note>
+  The agent and ability must match (e.g., you can't pair a Sova agent with a Viper ability). Icarus validates this automatically.
+</Note>
+
+## Lineup components
+
+### Agent marker
+
+Shows where the player should stand:
+
+- Displays the agent portrait
+- Can be alive or dead (for post-plant lineups)
+- Position stored in normalized coordinates
+
+### Ability marker
+
+Shows the ability target or placement:
+
+- Displays the ability icon
+- Supports rotation for directional abilities
+- Can include length/range for abilities like walls
+
+### Connection line
+
+A visual line connects the agent to the ability, making it clear they're part of the same lineup.
+
+## Adding media to lineups
+
+### Images
+
+Attach reference images:
+
+<Steps>
+  <Step title="Open lineup media">
+    Right-click the lineup and choose "Add Image" or open the lineup carousel.
+  </Step>
+  
+  <Step title="Upload images">
+    Select one or more images from your computer. Supported formats:
+    - PNG
+    - JPG/JPEG
+    - WebP
+  </Step>
+  
+  <Step title="Images are embedded">
+    Images are copied to the strategy's storage folder and assigned unique IDs.
+  </Step>
+</Steps>
+
+### YouTube links
+
+Embed a YouTube video:
+
+1. Paste the full YouTube URL
+2. Icarus extracts the video ID
+3. The video thumbnail appears in the lineup carousel
+
+<Note>
+  Only one YouTube link per lineup is supported. Choose the clearest demonstration video.
+</Note>
+
+### Notes
+
+Add text instructions:
+
+- Click the lineup to show the notes tooltip
+- Enter details like "stand on the right edge", "aim between the two windows", etc.
+- Notes appear on hover for quick reference
+
+## Viewing lineups
+
+### Hover tooltip
+
+When you hover over a lineup, a tooltip shows:
+
+- Lineup notes (if any)
+- Quick actions (delete, view media)
+
+### Media carousel
+
+Open the media carousel to view:
+
+- All attached images in a slideshow
+- YouTube video player
+- Full notes text
+
+<Steps>
+  <Step title="Open carousel">
+    Click the lineup icon or right-click and choose "View Media".
+  </Step>
+  
+  <Step title="Navigate media">
+    Use arrow buttons to cycle through images.
+  </Step>
+  
+  <Step title="Play video">
+    The YouTube player loads inline for quick reference.
+  </Step>
+</Steps>
+
+## Editing lineups
+
+### Update position
+
+Lineup positions are fixed after creation. To adjust:
+
+1. Delete the lineup
+2. Create a new lineup at the correct position
+
+This prevents accidental movement of precise lineups.
+
+### Update rotation
+
+For rotatable abilities:
+
+1. Select the lineup
+2. Drag to rotate the ability marker
+3. The new angle is saved automatically
+
+### Update media and notes
+
+<Steps>
+  <Step title="Open the lineup">
+    Click or right-click the lineup.
+  </Step>
+  
+  <Step title="Add/remove images">
+    Upload new images or delete existing ones.
+  </Step>
+  
+  <Step title="Edit notes">
+    Update the text description.
+  </Step>
+  
+  <Step title="Update YouTube link">
+    Paste a new URL to replace the existing video.
+  </Step>
+</Steps>
+
+## Deleting lineups
+
+Remove lineups you no longer need:
+
+<Steps>
+  <Step title="Select delete">
+    Right-click the lineup and choose "Delete".
+  </Step>
+  
+  <Step title="Lineup is removed">
+    The agent, ability, and connection line disappear.
+  </Step>
+  
+  <Step title="Images are orphaned">
+    Unused images are cleaned up when the strategy is next loaded.
+  </Step>
+</Steps>
+
+<Warning>
+  Deleting a lineup does not immediately delete its images from disk. Run the cleanup process by reloading the strategy.
+</Warning>
+
+### Undo/redo
+
+Lineup deletion supports undo:
+
+- **Undo** restores the lineup with all media intact
+- **Redo** removes it again
+
+## Switching sides
+
+When you switch between attack and defense:
+
+1. All lineups are flipped horizontally and vertically
+2. Agent and ability positions are mirrored
+3. Rotation angles are adjusted to preserve the visual alignment
+4. Media and notes remain unchanged
+
+<Note>
+  Switching sides is useful for adapting attacking lineups to defending scenarios (e.g., retake lineups).
+</Note>
+
+## Data structure
+
+Lineups are stored as:
+
+```json
+{
+  "id": "lineup-uuid",
+  "agent": {
+    "type": "sova",
+    "position": {"dx": 300.0, "dy": 200.0},
+    "state": "alive"
+  },
+  "ability": {
+    "type": "sova",
+    "abilityType": "recon_dart",
+    "position": {"dx": 800.0, "dy": 600.0},
+    "rotation": 0.785,
+    "length": 100.0
+  },
+  "youtubeLink": "https://youtube.com/watch?v=...",
+  "notes": "Aim at the top-right corner of the box. Stand in the corner.",
+  "images": [
+    {"id": "img-uuid-1", "fileExtension": ".png"},
+    {"id": "img-uuid-2", "fileExtension": ".jpg"}
+  ]
+}
+```
+
+## Image storage
+
+Lineup images are stored in:
+
+```
+<app_support>/
+  <strategy_id>/
+    images/
+      <image_id>.png
+      <image_id>.jpg
+```
+
+When exporting a strategy, images are included in the ZIP file.
+
+## Best practices
+
+<Tip>
+  Create a dedicated page for lineups:
+  - Name it "Lineups - A Site" or "Sova Lineups - Ascent"
+  - Use only lineups on this page (no other agents or drawings)
+  - This makes it easy to share lineup collections
+</Tip>
+
+### Documentation
+
+- **Clear notes** - Describe exactly where to stand and aim
+- **Multiple images** - Show the lineup from different angles
+- **Video links** - Include a demonstration video when possible
+
+### Organization
+
+- Group lineups by map area ("A Main", "B Heaven", etc.)
+- Create separate pages for attacking and defending lineups
+- Use descriptive names for lineup groups
+
+### Performance
+
+- Limit image file sizes (compress before uploading)
+- Remove unused lineups to reduce strategy file size
+- Use YouTube links instead of large video files
+
+## Common use cases
+
+### Sova recon darts
+
+1. Place Sova at the lineup position
+2. Place the recon dart at the landing spot
+3. Add a screenshot showing crosshair placement
+4. Note any jump or crouch requirements
+
+### Viper smokes
+
+1. Place Viper at the throw position
+2. Place the smoke at the target location
+3. Rotate the smoke if needed
+4. Add notes about one-way positions
+
+### Molly lineups
+
+1. Place the agent (Brimstone, Viper, Killjoy, etc.)
+2. Place the molly at the impact point
+3. Add images showing the throw arc
+4. Note the timing (e.g., "throw immediately after plant")

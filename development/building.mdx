@@ -1,0 +1,263 @@
+---
+title: Building
+description: Building Icarus for different platforms
+---
+
+This guide covers building Icarus for production on Windows, Linux, and macOS.
+
+## Development Builds
+
+For development, use debug builds which compile faster:
+
+<CodeGroup>
+```bash Linux
+fvm flutter build linux --debug
+```
+
+```bash Windows
+fvm flutter build windows --debug
+```
+
+```bash macOS
+fvm flutter build macos --debug
+```
+</CodeGroup>
+
+The debug build output locations:
+
+- **Linux**: `build/linux/x64/debug/bundle/icarus`
+- **Windows**: `build/windows/x64/runner/Debug/icarus.exe`
+- **macOS**: `build/macos/Build/Products/Debug/icarus.app`
+
+## Production Builds
+
+### Linux
+
+Build a release bundle:
+
+```bash
+fvm flutter build linux --release
+```
+
+Output: `build/linux/x64/release/bundle/`
+
+The bundle directory contains:
+- `icarus` - Executable binary
+- `lib/` - Shared libraries
+- `data/` - Assets and resources
+
+<Note>
+  Distribute the entire `bundle` directory, not just the executable.
+</Note>
+
+### Windows
+
+For Windows, you can build either a standalone executable or an MSIX package.
+
+#### Standalone Executable
+
+```bash
+fvm flutter build windows --release
+```
+
+Output: `build/windows/x64/runner/Release/`
+
+#### MSIX Package (Microsoft Store)
+
+Icarus uses the `msix` package for Microsoft Store distribution.
+
+<Steps>
+  <Step title="Install MSIX tool">
+    ```bash
+    dart pub global activate msix
+    ```
+  </Step>
+
+  <Step title="Configure pubspec.yaml">
+    The MSIX configuration is in `pubspec.yaml:56`:
+
+    ```yaml
+    msix_config:
+      display_name: "Icarus: Valorant Strategies & Line ups"
+      publisher_display_name: Dara A
+      identity_name: DaraA.IcarusValorantStrategiesLineups
+      publisher: CN=39055448-F6AA-42E9-91F6-9CF8828C444C
+      logo_path: E:\Projects\icarus\windows\runner\resources\app_icon.ico
+      msix_version: 3.1.0.0
+      file_extension: .ica
+      store: true
+    ```
+  </Step>
+
+  <Step title="Build MSIX">
+    ```bash
+    fvm dart run msix:create
+    ```
+
+    Output: `build/windows/x64/runner/Release/*.msix`
+  </Step>
+</Steps>
+
+### macOS
+
+Build for macOS:
+
+```bash
+fvm flutter build macos --release
+```
+
+Output: `build/macos/Build/Products/Release/icarus.app`
+
+For distribution, create a DMG:
+
+```bash
+hdiutil create -volname Icarus -srcfolder build/macos/Build/Products/Release/icarus.app -ov -format UDZO icarus.dmg
+```
+
+## Version Management
+
+Icarus includes a PowerShell script for automated version bumping on Windows.
+
+### Bump Version Script
+
+**File**: `scripts/bump_version.ps1`
+
+The script updates versions across `pubspec.yaml` and `lib/const/settings.dart`, then builds the MSIX.
+
+<Tabs>
+  <Tab title="Patch">
+    Increment patch version (e.g., 3.1.0 → 3.1.1):
+
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File scripts/bump_version.ps1 -Bump patch
+    ```
+  </Tab>
+  <Tab title="Minor">
+    Increment minor version (e.g., 3.1.0 → 3.2.0):
+
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File scripts/bump_version.ps1 -Bump minor
+    ```
+  </Tab>
+  <Tab title="Major">
+    Increment major version (e.g., 3.1.0 → 4.0.0):
+
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File scripts/bump_version.ps1 -Bump major
+    ```
+  </Tab>
+</Tabs>
+
+The script:
+1. Reads current version from `pubspec.yaml`
+2. Increments based on bump type
+3. Updates `version` field in `pubspec.yaml`
+4. Updates `msix_version` field in `pubspec.yaml`
+5. Updates `versionNumber` and `versionName` in `lib/const/settings.dart`
+6. Runs `dart run msix:create`
+7. Opens the output folder
+
+<Warning>
+  The script requires all version fields to be synchronized before running. If there's a mismatch, it will error and require manual fixes.
+</Warning>
+
+### Manual Version Updates
+
+If you need to update versions manually:
+
+1. **pubspec.yaml** (line 6):
+   ```yaml
+   version: 3.1.0+38  # version number
+   ```
+
+2. **pubspec.yaml** (line 62, MSIX only):
+   ```yaml
+   msix_version: 3.1.0.0  # version number
+   ```
+
+3. **lib/const/settings.dart**:
+   ```dart
+   static const int versionNumber = 38;  // build number
+   static const String versionName = "3.1.0";  // version string
+   ```
+
+## Alternative Build Script
+
+There's also a Dart-based build script at `build_script.dart:1` for cross-platform use:
+
+```bash
+fvm dart run build_script.dart <version> <build_number>
+```
+
+Example:
+```bash
+fvm dart run build_script.dart 1.7.2 12
+```
+
+This updates version strings but doesn't build the app.
+
+## Code Signing
+
+### Windows
+
+For Microsoft Store submissions, the MSIX must be signed with a valid certificate. The publisher certificate is configured in `pubspec.yaml:60`.
+
+### macOS
+
+For App Store or notarized distribution:
+
+```bash
+codesign --deep --force --verify --verbose --sign "Developer ID Application: Your Name" icarus.app
+```
+
+## Build Optimization
+
+### Release Flags
+
+For smaller binaries, use:
+
+```bash
+fvm flutter build <platform> --release --obfuscate --split-debug-info=debug-info/
+```
+
+- `--obfuscate`: Obfuscates Dart code
+- `--split-debug-info`: Splits debug symbols for crash reporting
+
+### Tree Shaking
+
+Flutter automatically removes unused code in release builds.
+
+## File Associations
+
+Icarus registers the `.ica` file extension:
+
+- **Windows**: Configured in `pubspec.yaml:63` for MSIX
+- **Linux/macOS**: Requires manual MIME type registration
+
+## Troubleshooting
+
+### MSIX Build Fails
+
+Ensure the logo path in `pubspec.yaml:61` points to a valid `.ico` file:
+
+```yaml
+logo_path: E:\Projects\icarus\windows\runner\resources\app_icon.ico
+```
+
+### Linux Missing Libraries
+
+If the app fails to launch, check for missing shared libraries:
+
+```bash
+ldd build/linux/x64/release/bundle/icarus
+```
+
+Install any missing dependencies.
+
+### macOS Gatekeeper
+
+For unsigned builds, users may need to bypass Gatekeeper:
+
+```bash
+xattr -cr icarus.app
+```

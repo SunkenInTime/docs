@@ -1,0 +1,442 @@
+---
+title: File Format
+description: The .ica file format specification for importing and exporting strategies
+---
+
+## Overview
+
+Icarus strategies are exported as `.ica` files, which are ZIP archives containing JSON metadata and embedded image assets. This format allows strategies to be shared between users while preserving all data and references.
+
+## File Structure
+
+An `.ica` file is a standard ZIP archive with the following structure:
+
+```
+strategy_name.ica (ZIP archive)
+├── strategy_name.json       # Metadata and element data
+├── image1.png               # Embedded images (if any)
+├── image2.jpg
+└── ...
+```
+
+### Archive Contents
+
+<ResponseField name="<basename>.json" type="JSON file" required>
+  The main strategy document containing all metadata, pages, and element positions. The filename matches the archive base name.
+</ResponseField>
+
+<ResponseField name="<imageID>.<ext>" type="Image files">
+  PNG or JPG images referenced by `PlacedImage` elements. Each image is named by its unique ID.
+</ResponseField>
+
+## JSON Schema
+
+The JSON file inside the archive follows this structure:
+
+```json
+{
+  "versionNumber": "38",
+  "mapData": "Ascent",
+  "pages": [
+    {
+      "id": "uuid-v4",
+      "sortIndex": "0",
+      "name": "Page 1",
+      "drawingData": [...],
+      "agentData": [...],
+      "abilityData": [...],
+      "textData": [...],
+      "imageData": [...],
+      "utilityData": [...],
+      "isAttack": "true",
+      "settings": {...},
+      "lineUpData": [...]
+    }
+  ]
+}
+```
+
+### Root Fields
+
+<ParamField path="versionNumber" type="string" required>
+  Schema version as a string. Current version is `"38"`. Used for migration detection.
+</ParamField>
+
+<ParamField path="mapData" type="string" required>
+  Valorant map name (e.g., `"Ascent"`, `"Bind"`, `"Haven"`, `"Split"`, `"Icebox"`, `"Breeze"`, `"Fracture"`, `"Pearl"`, `"Lotus"`, `"Sunset"`, `"Abyss"`)
+</ParamField>
+
+<ParamField path="pages" type="array" required>
+  Array of page objects, each representing a separate canvas in the strategy
+</ParamField>
+
+### Page Object
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the page (UUID v4)
+</ParamField>
+
+<ParamField path="sortIndex" type="string" required>
+  Zero-based index determining page order (stored as string)
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  User-visible page name (e.g., `"Page 1"`, `"Execute"`, `"Post-Plant"`)
+</ParamField>
+
+<ParamField path="isAttack" type="string" required>
+  `"true"` for attacking side, `"false"` for defending side
+</ParamField>
+
+<ParamField path="drawingData" type="array">
+  Free-hand drawings and lines as `FreeDrawing` objects
+</ParamField>
+
+<ParamField path="agentData" type="array">
+  Placed agent icons as `PlacedAgent` objects
+</ParamField>
+
+<ParamField path="abilityData" type="array">
+  Placed abilities as `PlacedAbility` objects (smokes, walls, etc.)
+</ParamField>
+
+<ParamField path="textData" type="array">
+  Text labels as `PlacedText` objects
+</ParamField>
+
+<ParamField path="imageData" type="array">
+  Custom images as `PlacedImage` objects (references files in the archive)
+</ParamField>
+
+<ParamField path="utilityData" type="array">
+  Utility indicators as `PlacedUtility` objects
+</ParamField>
+
+<ParamField path="lineUpData" type="array">
+  Line-up configurations combining agents and abilities
+</ParamField>
+
+<ParamField path="settings" type="object">
+  Page-specific display settings (agent size, ability size, etc.)
+</ParamField>
+
+## Export Process
+
+The export operation converts a strategy from Hive storage into a `.ica` file.
+
+**Location:** `lib/providers/strategy_provider.dart:1099-1161`
+
+```dart
+Future<void> zipStrategy({
+  required String id,
+  Directory? saveDir,
+  String? outputFilePath,
+}) async {
+  final strategy = Hive.box<StrategyData>(HiveBoxNames.strategiesBox).get(id);
+  if (strategy == null) return;
+
+  // Serialize all pages to JSON
+  final pages = strategy.pages.map((p) => p.toJson(strategy.id)).toList();
+  final pageJson = jsonEncode(pages);
+
+  final data = '''
+    {
+    "versionNumber": "${Settings.versionNumber}",
+    "mapData": "${Maps.mapNames[strategy.mapData]}",
+    "pages": $pageJson
+    }
+  ''';
+
+  final sanitizedStrategyName = sanitizeFileName(strategy.name);
+  
+  // Create ZIP archive
+  final zipEncoder = ZipFileEncoder()..create(outPath);
+
+  // Add images from file system
+  final supportDirectory = await getApplicationSupportDirectory();
+  final imagesDirectory = Directory(path.join(
+    supportDirectory.path, strategy.id, 'images'
+  ));
+  
+  await for (final entity in imagesDirectory.list()) {
+    if (entity is File) {
+      await zipEncoder.addFile(entity);
+    }
+  }
+
+  // Add JSON file
+  final jsonArchiveFile = ArchiveFile.bytes(
+    "$archiveBase.json", 
+    utf8.encode(data)
+  );
+  zipEncoder.addArchiveFile(jsonArchiveFile);
+  
+  await zipEncoder.close();
+}
+```
+
+### Export Steps
+
+1. **Serialize pages** - Convert all `StrategyPage` objects to JSON
+2. **Create archive** - Initialize a new ZIP file with the strategy name
+3. **Add images** - Copy all images from the strategy's directory into the archive
+4. **Add JSON** - Encode metadata as UTF-8 and add to archive
+5. **Close archive** - Finalize the ZIP file
+
+### File Name Sanitization
+
+**Location:** `lib/providers/strategy_provider.dart:1094-1097`
+
+```dart
+static String sanitizeFileName(String input) {
+  final sanitized = input.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+  return sanitized.isEmpty ? 'untitled' : sanitized;
+}
+```
+
+Invalid file system characters are replaced with underscores to ensure cross-platform compatibility.
+
+## Import Process
+
+Importing a `.ica` file reverses the export process, extracting the archive and reconstituting the strategy.
+
+**Location:** `lib/providers/strategy_provider.dart:841-982`
+
+```dart
+Future<void> _loadFromXFile(XFile xFile) async {
+  final newID = const Uuid().v4();
+  
+  // Check if file is ZIP format
+  bool isZip = await isZipFile(File(xFile.path));
+  
+  final bytes = await xFile.readAsBytes();
+  String jsonData = "";
+  
+  if (isZip) {
+    // Decode ZIP archive
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final imageFolder = await PlacedImageProvider.getImageFolder(newID);
+    final tempDirectory = await getTempDirectory(newID);
+    
+    await extractArchiveToDisk(archive, tempDirectory.path);
+    
+    // Extract JSON and images
+    for (final fileEntity in tempDirectory.listSync()) {
+      if (fileEntity is File) {
+        if (path.extension(fileEntity.path) == ".json") {
+          jsonData = await fileEntity.readAsString();
+        } else if (path.extension(fileEntity.path) != ".ica") {
+          final fileName = path.basename(fileEntity.path);
+          await fileEntity.copy(path.join(imageFolder.path, fileName));
+        }
+      }
+    }
+  } else {
+    // Legacy format: plain JSON
+    jsonData = await xFile.readAsString();
+  }
+
+  // Parse JSON
+  Map<String, dynamic> json = jsonDecode(jsonData);
+  
+  // Reconstruct data structures
+  final versionNumber = int.tryParse(json["versionNumber"].toString()) 
+      ?? Settings.versionNumber;
+  
+  final List<StrategyPage> pages = json["pages"] != null
+      ? await StrategyPage.listFromJson(
+          json: jsonEncode(json["pages"]),
+          strategyID: newID,
+          isZip: isZip,
+        )
+      : [];
+
+  StrategyData newStrategy = StrategyData(
+    pages: pages,
+    id: newID,
+    name: path.basenameWithoutExtension(xFile.name),
+    mapData: mapData,
+    versionNumber: versionNumber,
+    lastEdited: DateTime.now(),
+    folderID: null,
+  );
+
+  // Apply migrations if needed
+  newStrategy = await migrateLegacyData(newStrategy);
+
+  await Hive.box<StrategyData>(HiveBoxNames.strategiesBox)
+      .put(newStrategy.id, newStrategy);
+
+  await cleanUpTempDirectory(newStrategy.id);
+}
+```
+
+### Import Steps
+
+1. **Generate new ID** - Create a fresh UUID to avoid conflicts
+2. **Detect format** - Check if the file is ZIP or legacy JSON
+3. **Extract archive** - Unzip to temporary directory
+4. **Parse JSON** - Read and decode the metadata file
+5. **Copy images** - Move images to the strategy's permanent directory
+6. **Reconstruct objects** - Deserialize all pages and elements
+7. **Apply migrations** - Update schema if importing an older version
+8. **Save to Hive** - Store the new strategy in the database
+9. **Cleanup** - Delete temporary files
+
+### ZIP Detection
+
+**Location:** `lib/providers/strategy_provider.dart:826-839`
+
+```dart
+Future<bool> isZipFile(File file) async {
+  final raf = file.openSync(mode: FileMode.read);
+  final header = raf.readSync(4);
+  await raf.close();
+
+  // ZIP files start with 'PK\x03\x04'
+  return header.length == 4 &&
+      header[0] == 0x50 && // 'P'
+      header[1] == 0x4B && // 'K'
+      header[2] == 0x03 &&
+      header[3] == 0x04;
+}
+```
+
+The importer checks the file's magic number to determine if it's a modern ZIP-based `.ica` or a legacy plain JSON file.
+
+## Legacy Format Support
+
+Older versions of Icarus exported strategies as plain JSON files without embedded images. The importer still supports this format for backward compatibility:
+
+```dart
+if (isZip) {
+  imageData = await PlacedImageProvider.fromJson(
+      jsonString: jsonEncode(json['imageData']), strategyID: newID);
+} else {
+  // Legacy: images stored as base64 in JSON
+  imageData = await PlacedImageProvider.legacyFromJson(
+      jsonString: jsonEncode(json["imageData"] ?? []), strategyID: newID);
+}
+```
+
+Legacy files are automatically upgraded to the current schema during import.
+
+## Folder Export
+
+You can export entire folders, creating a nested ZIP structure:
+
+**Location:** `lib/providers/strategy_provider.dart:1026-1058`
+
+```dart
+Future<void> exportFolder(String folderID) async {
+  final folder = Hive.box<Folder>(HiveBoxNames.foldersBox).get(folderID);
+  if (folder == null) return;
+
+  final directoryToZip = await Directory.systemTemp.createTemp('strategy_export');
+
+  try {
+    await zipFolder(directoryToZip, folderID);
+
+    final outputFile = await FilePicker.platform.saveFile(
+      type: FileType.custom,
+      dialogTitle: 'Please select an output file:',
+      fileName: "${sanitizeFileName(folder.name)}.zip",
+      allowedExtensions: ['zip'],
+    );
+
+    if (outputFile == null) return;
+
+    final encoder = ZipFileEncoder();
+    encoder.create(outputFile);
+    await encoder.addDirectory(directoryToZip, includeDirName: false);
+    await encoder.close();
+  } finally {
+    await directoryToZip.delete(recursive: true);
+  }
+}
+```
+
+The resulting `.zip` contains:
+
+```
+folder_name.zip
+├── strategy1.ica
+├── strategy2.ica
+├── subfolder/
+│   ├── strategy3.ica
+│   └── strategy4.ica
+└── ...
+```
+
+## Platform Considerations
+
+### Desktop Platforms
+
+Full support for ZIP archives with embedded images. Uses `archive` and `file_picker` packages.
+
+### Web Platform
+
+<Warning>
+  Image embedding is disabled on the web platform. Exported `.ica` files from the web version contain only JSON metadata.
+</Warning>
+
+```dart
+String fetchedImageData = kIsWeb 
+    ? "[]" 
+    : PlacedImageProvider.objectToJson(imageData, strategyID);
+```
+
+## Technical Details
+
+### Character Encoding
+
+All JSON is encoded as UTF-8:
+
+```dart
+ArchiveFile.bytes("$archiveBase.json", utf8.encode(data))
+```
+
+### Compression
+
+The `archive` package uses standard ZIP compression (DEFLATE algorithm). Images are stored uncompressed since they're already in compressed formats (PNG/JPEG).
+
+### File Extension
+
+The `.ica` extension stands for "**Ic**arus **A**rchive" and is registered with the OS on desktop platforms to enable double-click opening.
+
+## Example JSON
+
+Here's a minimal example of a `.ica` JSON file:
+
+```json
+{
+  "versionNumber": "38",
+  "mapData": "Ascent",
+  "pages": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "sortIndex": "0",
+      "name": "Default Setup",
+      "drawingData": [],
+      "agentData": [
+        {
+          "id": "agent-uuid",
+          "type": "Jett",
+          "position": {"dx": 500.0, "dy": 300.0},
+          "state": "none"
+        }
+      ],
+      "abilityData": [],
+      "textData": [],
+      "imageData": [],
+      "utilityData": [],
+      "isAttack": "true",
+      "settings": {
+        "agentSize": 35.0,
+        "abilitySize": 25.0
+      },
+      "lineUpData": []
+    }
+  ]
+}
+```

@@ -1,0 +1,83 @@
+---
+title: Development Overview
+description: Introduction to Icarus development and contribution
+---
+
+Icarus is an interactive strategy creation tool for Valorant players built with Flutter. It focuses on a robust map drawing system that lets teams create, save, and iterate on strategies locally.
+
+## Tech Stack
+
+Icarus is built with modern Flutter technologies:
+
+- **Flutter**: Cross-platform UI framework
+- **Riverpod**: State management
+- **Hive**: Local NoSQL database for storing strategies
+- **Shadcn UI**: Component library for consistent UI
+
+## Core Features
+
+- Interactive map drawing and annotations
+- Save, load, and organize strategies locally
+- Agent and ability helpers for Valorant characters
+- Desktop-focused UX for planning sessions
+- Multi-page strategy support
+- Export/import strategies as `.ica` files
+
+## Project Structure
+
+The codebase is organized as follows:
+
+```
+lib/
+├── main.dart                 # App bootstrap and initialization
+├── providers/                # Riverpod state management
+│   ├── strategy_provider.dart
+│   ├── folder_provider.dart
+│   ├── drawing_provider.dart
+│   └── ...
+├── widgets/                  # Reusable UI components
+├── const/                    # Constants and configurations
+│   ├── hive_boxes.dart      # Hive box definitions
+│   └── settings.dart        # App settings
+├── hive/                     # Hive adapters and models
+│   └── hive_registrar.g.dart
+└── strategy_view.dart       # Main strategy editing screen
+```
+
+## Key Concepts
+
+### Strategies
+
+Strategies are the core data model in Icarus. Each strategy contains:
+- Multiple pages for different phases of a plan
+- Drawing elements (lines, free-form drawings)
+- Placed agents and abilities
+- Text annotations and images
+- Map selection and attack/defend side
+
+### Folders
+
+Strategies are organized in a hierarchical folder structure, similar to a file system. Folders can be nested and customized with icons and colors.
+
+### State Management
+
+Icarus uses Riverpod providers for state management. Key providers include:
+- `strategyProvider` - Manages current strategy and persistence
+- `folderProvider` - Manages folder hierarchy
+- `drawingProvider` - Canvas drawing state
+- `agentProvider`, `abilityProvider` - Placed game elements
+
+## Development Requirements
+
+- Flutter SDK 3.38.4 (via FVM)
+- Dart >= 3.4.3
+- Platform-specific build tools (see Setup)
+
+## Contributing
+
+If you would like to contribute, please fork the repository and submit a pull request with your proposed changes.
+
+## Resources
+
+- [Microsoft Store Listing](https://apps.microsoft.com/detail/9PBWHHZRQFW6)
+- [Dev Log Video](https://youtu.be/dDn2rafvjMQ?si=mm1Sz-XrjvNQiRWE)

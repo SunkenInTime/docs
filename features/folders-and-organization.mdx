@@ -1,0 +1,302 @@
+---
+title: Folders and organization
+description: Organize strategies with folders, custom icons, and colors
+---
+
+Icarus provides a flexible folder system to keep your strategies organized. Create nested folders with custom icons and colors to build a structure that works for your team.
+
+## Creating folders
+
+<Steps>
+  <Step title="Click New Folder">
+    Open the folder creation dialog from the main menu.
+  </Step>
+  
+  <Step title="Name the folder">
+    Give it a descriptive name like "Pearl Strategies" or "Scrim Prep - Week 3".
+  </Step>
+  
+  <Step title="Choose an icon">
+    Select from 30+ icons including:
+    - Tactical symbols (flag, shield, sword)
+    - Organization icons (folder, archive, dashboard)
+    - Strategy icons (map, lightbulb, target)
+    - Gaming icons (esports, controller)
+  </Step>
+  
+  <Step title="Pick a color">
+    Choose from preset colors:
+    - Red
+    - Blue
+    - Green
+    - Orange
+    - Purple
+    - Generic (gray)
+    - Custom (pick any color)
+  </Step>
+  
+  <Step title="Folder is created">
+    The new folder appears in the current location (root or inside the active folder).
+  </Step>
+</Steps>
+
+<Note>
+  Folders can be nested infinitely. Create subfolders to organize strategies by map, agent comp, or any other criteria.
+</Note>
+
+## Folder hierarchy
+
+Folders use a parent-child relationship:
+
+- **Root folders** - Have no parent (`parentID` is null)
+- **Subfolders** - Have a `parentID` pointing to their parent folder
+
+### Navigating folders
+
+<Steps>
+  <Step title="Click a folder">
+    Opens the folder and shows its contents (strategies and subfolders).
+  </Step>
+  
+  <Step title="Use breadcrumbs">
+    The full folder path is displayed at the top. Click any folder in the path to jump there.
+  </Step>
+  
+  <Step title="Go back">
+    Click "Up" or the parent folder name to move up one level.
+  </Step>
+</Steps>
+
+## Organizing strategies
+
+### Moving strategies to folders
+
+<Steps>
+  <Step title="Drag and drop">
+    Drag a strategy from the list and drop it onto a folder.
+  </Step>
+  
+  <Step title="Strategy is moved">
+    The strategy's `folderID` is updated to the target folder.
+  </Step>
+</Steps>
+
+Alternatively:
+
+1. Right-click a strategy
+2. Choose "Move to Folder"
+3. Select the destination folder
+
+### Moving strategies out of folders
+
+Move a strategy back to the root:
+
+1. Right-click the strategy
+2. Choose "Move to Root"
+3. The strategy's `folderID` is set to null
+
+## Editing folders
+
+Update folder properties:
+
+<Steps>
+  <Step title="Right-click the folder">
+    Open the context menu.
+  </Step>
+  
+  <Step title="Choose Edit Folder">
+    The edit dialog opens.
+  </Step>
+  
+  <Step title="Update properties">
+    Change:
+    - Name
+    - Icon
+    - Color
+    - Custom color (if using custom color mode)
+  </Step>
+  
+  <Step title="Save changes">
+    The folder updates immediately in the UI.
+  </Step>
+</Steps>
+
+## Deleting folders
+
+Removing a folder also removes its contents:
+
+<Warning>
+  Deleting a folder permanently deletes all strategies inside it. This cannot be undone. Export important strategies before deleting their folder.
+</Warning>
+
+<Steps>
+  <Step title="Right-click the folder">
+    Open the context menu.
+  </Step>
+  
+  <Step title="Choose Delete Folder">
+    A confirmation dialog appears.
+  </Step>
+  
+  <Step title="Confirm deletion">
+    All strategies in the folder are deleted:
+    - Removed from the Hive database
+    - Storage folders (images, etc.) are deleted
+    - The folder itself is removed
+  </Step>
+</Steps>
+
+### Recursive deletion
+
+Deleting a folder deletes:
+
+- All strategies directly in the folder
+- All subfolders
+- All strategies in all subfolders
+- All associated files (images, etc.)
+
+## Moving folders
+
+Reorganize your folder structure:
+
+<Steps>
+  <Step title="Drag the folder">
+    Drag a folder onto another folder to make it a subfolder.
+  </Step>
+  
+  <Step title="Folder is moved">
+    The `parentID` is updated to the new parent folder.
+  </Step>
+</Steps>
+
+<Note>
+  You cannot move a folder into one of its own subfolders (circular reference prevention is not implemented, so be careful).
+</Note>
+
+## Exporting folders
+
+Export an entire folder and its contents:
+
+<Steps>
+  <Step title="Right-click the folder">
+    Choose "Export Folder".
+  </Step>
+  
+  <Step title="Select save location">
+    Pick where to save the ZIP file.
+  </Step>
+  
+  <Step title="Folder is zipped">
+    Icarus creates a ZIP containing:
+    - All strategies in the folder (as `.ica` files)
+    - All subfolders with their strategies
+    - Images and media embedded in each strategy
+  </Step>
+</Steps>
+
+### Folder export structure
+
+The ZIP file mirrors the folder hierarchy:
+
+```
+Pearl_Strategies.zip
+├── Pearl_Strategies/
+│   ├── strategy1.ica
+│   ├── strategy2.ica
+│   ├── A_Site/
+│   │   ├── a_site_execute.ica
+│   │   └── a_site_retake.ica
+│   └── B_Site/
+│       ├── b_site_default.ica
+│       └── b_site_fake.ica
+```
+
+## Icon and color options
+
+### Available icons
+
+Icarus includes 30+ icons:
+
+- **Organization** - `folder_shared`, `folder_special`, `workspaces`, `category`, `library_books`, `archive`, `dashboard`
+- **Strategy** - `map`, `place`, `explore`, `flag`, `outlined_flag`, `lightbulb`, `track_changes`, `timeline`
+- **Tactical** - `sword`, `shield`, `military_tech`, `security`, `bolt`
+- **Gaming** - `sports_esports`, `psychology`
+- **General** - `star`, `snowflake`, `bug`, `cake`, `code`, `shopping_cart`, `api`
+
+### Color presets
+
+- **Red** - `Colors.red`
+- **Blue** - `Colors.blue`
+- **Green** - `Colors.green`
+- **Orange** - `Colors.orange`
+- **Purple** - `Colors.purple`
+- **Generic** - Gray from theme
+- **Custom** - Any RGB color
+
+## Folder metadata
+
+Each folder stores:
+
+```dart
+class Folder {
+  String name;
+  String id;              // Unique UUID
+  DateTime dateCreated;
+  String? parentID;       // null for root folders
+  IconData icon;
+  FolderColor color;
+  Color? customColor;     // Used if color == FolderColor.custom
+}
+```
+
+## Best practices
+
+<Tip>
+  Organize folders by:
+  - **Map** - "Ascent", "Bind", "Icebox", etc.
+  - **Agent comp** - "Jett Dash", "Viper Smokes", etc.
+  - **Round type** - "Eco", "Full Buy", "Anti-Eco"
+  - **Scenario** - "Post-Plant", "Retake", "Default"
+</Tip>
+
+### Naming conventions
+
+Use consistent naming:
+
+- Start with the map name: "Ascent - A Site Executes"
+- Include the side: "Bind - Defense Setups"
+- Use dates for scrims: "Scrim Prep - 2024-01-15"
+
+### Color coding
+
+Develop a color system:
+
+- **Red** - Attacking strategies
+- **Blue** - Defending strategies
+- **Green** - Eco rounds
+- **Orange** - Experimental setups
+- **Purple** - Tournament-ready strategies
+
+### Folder depth
+
+Keep folder nesting reasonable:
+
+- **Good**: `Ascent > Attack > A Site > Executes`
+- **Too deep**: `Maps > Ascent > Attack > A Site > Executes > Jett Dash > Week 3`
+
+Aim for 2-3 levels maximum for quick navigation.
+
+## Performance considerations
+
+- Folders are loaded from Hive on startup
+- Large folder hierarchies may take longer to render
+- Folder icons are Flutter Material icons (no network requests)
+- Folder colors are stored as enums (efficient storage)
+
+## Searching and filtering
+
+While Icarus doesn't have built-in search (as of now), you can:
+
+- Use descriptive folder names for quick visual scanning
+- Organize chronologically (newest first) within folders
+- Export folders to ZIP and use your OS's search functionality

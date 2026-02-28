@@ -1,0 +1,477 @@
+---
+title: Data Storage
+description: Hive database architecture and local storage implementation
+---
+
+## Overview
+
+Icarus uses [Hive](https://docs.hivedb.dev/) as its local NoSQL database for storing strategies, folders, and all associated metadata. Hive provides fast, key-value storage with support for custom type adapters.
+
+## Hive Boxes
+
+The application uses two primary Hive boxes defined in `lib/const/hive_boxes.dart`:
+
+**Location:** `lib/const/hive_boxes.dart:1-5`
+
+```dart
+class HiveBoxNames {
+  static const strategiesBox = "strategy_box";
+  static const foldersBox = "folder_box";
+}
+```
+
+### Strategy Box
+
+<ResponseField name="strategiesBox" type="Box<StrategyData>">
+  Stores all strategy documents. Each strategy is keyed by its unique ID and contains multiple pages with placed elements.
+</ResponseField>
+
+**Key type:** `String` (strategy UUID)  
+**Value type:** `StrategyData`
+
+### Folder Box
+
+<ResponseField name="foldersBox" type="Box<Folder>">
+  Stores the folder hierarchy for organizing strategies. Supports nested folders through parent/child relationships.
+</ResponseField>
+
+**Key type:** `String` (folder UUID)  
+**Value type:** `Folder`
+
+## Type Adapters
+
+Hive requires type adapters for custom classes. Icarus uses code generation to automatically create adapters for all stored types.
+
+**Location:** `lib/hive/hive_adapters.dart:21-44`
+
+```dart
+@GenerateAdapters([
+  AdapterSpec<StrategyData>(),
+  AdapterSpec<PlacedWidget>(),
+  AdapterSpec<PlacedAgent>(),
+  AdapterSpec<PlacedAbility>(),
+  AdapterSpec<PlacedText>(),
+  AdapterSpec<PlacedImage>(),
+  AdapterSpec<MapValue>(),
+  AdapterSpec<AgentType>(),
+  AdapterSpec<Offset>(),
+  AdapterSpec<FreeDrawing>(),
+  AdapterSpec<Line>(),
+  AdapterSpec<BoundingBox>(),
+  AdapterSpec<StrategySettings>(),
+  AdapterSpec<PlacedUtility>(),
+  AdapterSpec<UtilityType>(),
+  AdapterSpec<Folder>(),
+  AdapterSpec<IconData>(),
+  AdapterSpec<FolderColor>(),
+  AdapterSpec<StrategyPage>(),
+  AdapterSpec<LineUp>(),
+  AdapterSpec<SimpleImageData>(),
+  AdapterSpec<AgentState>(),
+])
+part 'hive_adapters.g.dart';
+```
+
+<Note>
+  After modifying any Hive-stored classes, you must regenerate adapters using:  
+  `fvm flutter pub run build_runner build --delete-conflicting-outputs`
+</Note>
+
+## Data Models
+
+### StrategyData
+
+The root document representing a complete strategy with metadata and pages.
+
+**Location:** `lib/providers/strategy_provider.dart:40-142`
+
+```dart
+class StrategyData extends HiveObject {
+  final String id;
+  String name;
+  final int versionNumber;
+  final List<StrategyPage> pages;
+  final MapValue mapData;
+  final DateTime lastEdited;
+  final DateTime createdAt;
+  String? folderID;
+
+  StrategyData({
+    required this.id,
+    required this.name,
+    required this.mapData,
+    required this.versionNumber,
+    required this.lastEdited,
+    required this.folderID,
+    this.pages = const [],
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? lastEdited;
+}
+```
+
+<ParamField path="id" type="String" required>
+  Unique identifier (UUID v4)
+</ParamField>
+
+<ParamField path="name" type="String" required>
+  User-visible strategy name
+</ParamField>
+
+<ParamField path="versionNumber" type="int" required>
+  Schema version for migration purposes (current: 38)
+</ParamField>
+
+<ParamField path="pages" type="List<StrategyPage>">
+  All pages in the strategy document
+</ParamField>
+
+<ParamField path="mapData" type="MapValue" required>
+  The Valorant map this strategy is designed for
+</ParamField>
+
+<ParamField path="lastEdited" type="DateTime" required>
+  Timestamp of the most recent modification
+</ParamField>
+
+<ParamField path="createdAt" type="DateTime">
+  Timestamp when the strategy was first created
+</ParamField>
+
+<ParamField path="folderID" type="String?">
+  ID of the parent folder, or null for root-level strategies
+</ParamField>
+
+<Note>
+  `StrategyData` includes deprecated legacy fields (`drawingData`, `agentData`, etc.) that are maintained for backward compatibility but no longer used. All new data is stored in the `pages` list.
+</Note>
+
+### StrategyPage
+
+A single page within a strategy, containing all placed elements for that page.
+
+**Location:** `lib/providers/strategy_page.dart:17-44`
+
+```dart
+class StrategyPage extends HiveObject {
+  final String id;
+  final int sortIndex;
+  final String name;
+  final List<DrawingElement> drawingData;
+  final List<PlacedAgent> agentData;
+  final List<PlacedAbility> abilityData;
+  final List<PlacedText> textData;
+  final List<PlacedImage> imageData;
+  final List<PlacedUtility> utilityData;
+  final bool isAttack;
+  final List<LineUp> lineUps;
+  final StrategySettings settings;
+
+  StrategyPage({
+    required this.id,
+    required this.name,
+    required this.drawingData,
+    required this.agentData,
+    required this.abilityData,
+    required this.textData,
+    required this.imageData,
+    required this.utilityData,
+    required this.sortIndex,
+    required this.isAttack,
+    required this.settings,
+    this.lineUps = const [],
+  });
+}
+```
+
+<ParamField path="sortIndex" type="int" required>
+  Zero-based index determining page order (used for navigation)
+</ParamField>
+
+<ParamField path="isAttack" type="bool" required>
+  Whether this page shows attacking or defending positions
+</ParamField>
+
+<ParamField path="settings" type="StrategySettings" required>
+  Page-specific display settings (agent size, ability size, etc.)
+</ParamField>
+
+### Folder
+
+Organizational container for strategies, supporting hierarchical nesting.
+
+**Location:** `lib/providers/folder_provider.dart:22-39`
+
+```dart
+class Folder extends HiveObject {
+  String name;
+  final String id;
+  final DateTime dateCreated;
+  String? parentID;
+  IconData icon;
+  FolderColor color;
+  Color? customColor;
+
+  Folder({
+    required this.name,
+    required this.id,
+    required this.dateCreated,
+    required this.icon,
+    this.color = FolderColor.red,
+    this.parentID,
+    this.customColor,
+  });
+
+  bool get isRoot => parentID == null;
+}
+```
+
+<ParamField path="parentID" type="String?">
+  ID of parent folder. Null indicates a root-level folder.
+</ParamField>
+
+<ParamField path="icon" type="IconData" required>
+  Material icon to display for this folder
+</ParamField>
+
+<ParamField path="color" type="FolderColor" required>
+  Preset color theme (red, blue, green, orange, purple, generic, custom)
+</ParamField>
+
+<ParamField path="customColor" type="Color?">
+  Custom color value (only used when color = FolderColor.custom)
+</ParamField>
+
+## File System Storage
+
+While metadata is stored in Hive, binary assets (images) are stored in the file system.
+
+### Directory Structure
+
+Each strategy gets its own directory under the application support directory:
+
+```
+<ApplicationSupportDirectory>/
+└── <strategyID>/
+    └── images/
+        ├── <imageID1>.png
+        ├── <imageID2>.jpg
+        └── ...
+```
+
+**Location:** `lib/providers/strategy_provider.dart:241-256`
+
+```dart
+Future<Directory> setStorageDirectory(String strategyID) async {
+  final directory = await getApplicationSupportDirectory();
+  final customDirectory = Directory(path.join(directory.path, strategyID));
+
+  if (!await customDirectory.exists()) {
+    await customDirectory.create(recursive: true);
+  }
+
+  return customDirectory;
+}
+```
+
+### Image Management
+
+Images are stored as files but referenced in Hive through `PlacedImage` objects that contain:
+
+- Image ID (filename)
+- Position on canvas
+- Size and rotation
+- Display settings
+
+The `PlacedImageProvider` handles loading images from disk and managing unused image cleanup.
+
+## CRUD Operations
+
+### Creating a Strategy
+
+**Location:** `lib/providers/strategy_provider.dart:984-1019`
+
+```dart
+Future<String> createNewStrategy(String name) async {
+  final newID = const Uuid().v4();
+  final pageID = const Uuid().v4();
+  
+  final newStrategy = StrategyData(
+    mapData: MapValue.ascent,
+    versionNumber: Settings.versionNumber,
+    id: newID,
+    name: name,
+    pages: [
+      StrategyPage(
+        id: pageID,
+        name: "Page 1",
+        drawingData: [],
+        agentData: [],
+        abilityData: [],
+        textData: [],
+        imageData: [],
+        utilityData: [],
+        lineUps: [],
+        sortIndex: 0,
+        isAttack: true,
+        settings: StrategySettings(),
+      )
+    ],
+    lastEdited: DateTime.now(),
+    folderID: ref.read(folderProvider),
+  );
+
+  await Hive.box<StrategyData>(HiveBoxNames.strategiesBox)
+      .put(newStrategy.id, newStrategy);
+
+  return newStrategy.id;
+}
+```
+
+### Reading a Strategy
+
+```dart
+final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+final strategy = box.get(strategyID);
+```
+
+Hive boxes are synchronous for reads, making strategy retrieval instant.
+
+### Updating a Strategy
+
+Since `StrategyData` extends `HiveObject`, you can call `.save()` on any modified instance:
+
+**Location:** `lib/providers/strategy_provider.dart:1177-1187`
+
+```dart
+Future<void> renameStrategy(String strategyID, String newName) async {
+  final strategyBox = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+  final strategy = strategyBox.get(strategyID);
+
+  if (strategy != null) {
+    strategy.name = newName;
+    await strategy.save();
+  }
+}
+```
+
+Alternatively, use `box.put(key, value)` to replace the entire document:
+
+```dart
+final updated = strategy.copyWith(name: newName, lastEdited: DateTime.now());
+await box.put(strategy.id, updated);
+```
+
+### Deleting a Strategy
+
+**Location:** `lib/providers/strategy_provider.dart:1216-1226`
+
+```dart
+Future<void> deleteStrategy(String strategyID) async {
+  await Hive.box<StrategyData>(HiveBoxNames.strategiesBox).delete(strategyID);
+
+  final directory = await getApplicationSupportDirectory();
+  final customDirectory = Directory(path.join(directory.path, strategyID));
+
+  if (!await customDirectory.exists()) return;
+
+  await customDirectory.delete(recursive: true);
+}
+```
+
+Deletion removes both the Hive entry and the entire file system directory for that strategy.
+
+## Querying Strategies
+
+### Get All Strategies
+
+```dart
+final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+final allStrategies = box.values.toList();
+```
+
+### Filter by Folder
+
+```dart
+final strategiesInFolder = box.values
+    .where((strategy) => strategy.folderID == folderID)
+    .toList();
+```
+
+### Sort by Last Edited
+
+```dart
+final sortedStrategies = box.values.toList()
+  ..sort((a, b) => b.lastEdited.compareTo(a.lastEdited));
+```
+
+## Data Integrity
+
+### Automatic Cleanup
+
+When loading a strategy, unused images are automatically deleted to prevent storage bloat:
+
+**Location:** `lib/providers/strategy_provider.dart:730-743`
+
+```dart
+List<String> allImageIds = [];
+for (final page in newStrat.pages) {
+  allImageIds.addAll(page.imageData.map((image) => image.id));
+  for (final lineUp in page.lineUps) {
+    allImageIds.addAll(lineUp.images.map((image) => image.id));
+  }
+}
+
+await ref
+    .read(placedImageProvider.notifier)
+    .deleteUnusedImages(newStrat.id, allImageIds);
+```
+
+### Version Tracking
+
+Every strategy stores a `versionNumber` field that matches the app version when it was last saved. This enables safe schema migrations (see [Migrations](/technical/migrations)).
+
+**Current version:** `Settings.versionNumber = 38`
+
+## Performance Considerations
+
+### Lazy Box vs. Regular Box
+
+Icarus uses regular Hive boxes (not lazy boxes) because:
+
+- Strategies are small enough to keep in memory
+- Synchronous access simplifies the provider architecture
+- The entire box loads on app startup for instant navigation
+
+### Deep Copying
+
+When switching pages or duplicating strategies, Icarus performs deep copies to avoid shared references:
+
+**Location:** `lib/providers/strategy_page.dart:46-83`
+
+```dart
+StrategyPage copyWith({...}) {
+  return StrategyPage(
+    drawingData: DrawingProvider.fromJson(
+        DrawingProvider.objectToJson(drawingData ?? this.drawingData)),
+    agentData: AgentProvider.fromJson(AgentProvider.objectToJson(
+      agentData ?? this.agentData,
+    )),
+    // ... deep copy all lists
+  );
+}
+```
+
+This prevents modifications on one page from affecting another.
+
+## Web Platform Notes
+
+<Warning>
+  Image storage is disabled on the web platform (`kIsWeb == true`). All image-related operations are skipped to avoid file system access issues.
+</Warning>
+
+```dart
+if (!kIsWeb) {
+  imageData = await PlacedImageProvider.fromJson(
+      jsonString: jsonEncode(json['imageData']), strategyID: strategyID);
+}
+```

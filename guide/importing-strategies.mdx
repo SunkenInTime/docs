@@ -1,0 +1,180 @@
+---
+title: Importing strategies
+description: Load strategies created by others or transfer between installations
+---
+
+## Import methods
+
+Icarus supports several ways to import strategies:
+
+- **File picker**: Choose `.ica` files through a standard dialog
+- **Drag and drop**: Drag files directly into the application window
+- **Direct file paths**: Open files via command-line arguments or file associations
+
+<Note>
+  Imported strategies are automatically assigned a new unique ID and added to your library. The original file is not modified.
+</Note>
+
+## Importing from file picker
+
+Use the built-in file picker to import strategies:
+
+<Steps>
+  <Step title="Open import dialog">
+    From the file menu, select "Import Strategy" or "Open".
+  </Step>
+  
+  <Step title="Select files">
+    Browse to your `.ica` files. You can select multiple files at once for batch import.
+  </Step>
+  
+  <Step title="Confirm import">
+    Click "Open" to begin importing. Each strategy is processed and added to your library.
+  </Step>
+</Steps>
+
+## Importing via drag and drop
+
+The fastest way to import strategies:
+
+1. Open Icarus to your library view
+2. Drag one or more `.ica` files from your file manager
+3. Drop them anywhere in the Icarus window
+4. Strategies are imported automatically
+
+<Tip>
+  Drag and drop works from any file manager, including Windows Explorer, macOS Finder, and Linux file browsers.
+</Tip>
+
+## Import process
+
+When you import a strategy, Icarus performs these steps:
+
+<Steps>
+  <Step title="File validation">
+    Checks if the file is a valid ZIP archive (`.ica` format) or legacy JSON. ZIP files are identified by their magic number header (`PK\x03\x04`).
+  </Step>
+  
+  <Step title="ID generation">
+    Generates a new unique ID for the imported strategy to prevent conflicts with existing strategies.
+  </Step>
+  
+  <Step title="Extract contents">
+    Extracts the JSON data and image files to a temporary directory.
+  </Step>
+  
+  <Step title="Image processing">
+    Copies images to the new strategy's support directory. Images are organized by the new strategy ID.
+  </Step>
+  
+  <Step title="Data parsing">
+    Parses JSON data for pages, drawings, agents, abilities, text, utilities, and settings.
+  </Step>
+  
+  <Step title="Migration">
+    Applies any necessary migrations if the strategy was created with an older version of Icarus.
+  </Step>
+  
+  <Step title="Storage">
+    Saves the migrated strategy to the local Hive database.
+  </Step>
+  
+  <Step title="Cleanup">
+    Removes temporary extraction files.
+  </Step>
+</Steps>
+
+## Legacy format support
+
+Icarus handles older strategy formats:
+
+### Pre-ZIP format
+
+Strategies saved before the ZIP format was introduced:
+
+- Plain JSON files (no ZIP compression)
+- Images embedded as base64 data
+- These are automatically detected and converted
+
+### Pre-pages format
+
+Strategies created before multi-page support:
+
+- Flat structure with single set of elements
+- Automatically migrated to a single-page structure
+- Original data is preserved and placed on "Page 1"
+
+### Coordinate system migration
+
+Strategies from version 38 and earlier:
+
+- Used a different aspect ratio for maps
+- Coordinates are automatically transformed to the modern 16:9 world space
+- Padding is added to center maps properly
+
+<Note>
+  All migrations happen automatically during import. You don't need to do anything special to open older strategies.
+</Note>
+
+## Image import details
+
+### ZIP-based images (modern format)
+
+Images in ZIP archives:
+
+- Stored as separate files alongside the JSON
+- Referenced by UUID in the strategy data
+- Copied to the new strategy's image folder during import
+
+### Legacy base64 images
+
+Older embedded images:
+
+- Decoded from base64 strings in JSON
+- Saved as individual files in the new format
+- Image IDs are preserved when possible
+
+<Tip>
+  If you're importing strategies created on the web version, images might be handled differently. Desktop versions use file-based storage for better performance.
+</Tip>
+
+## Error handling
+
+If import fails:
+
+- **Invalid file format**: Ensure the file is a valid `.ica` or JSON file
+- **Corrupted ZIP**: Re-export the strategy from the source
+- **Missing JSON**: The archive must contain a `.json` file
+- **Parse errors**: The JSON structure may be incompatible
+
+<Warning>
+  Always keep backups of original strategy files. While migration is designed to be safe, complex strategies with many images can occasionally encounter issues.
+</Warning>
+
+## Importing folder exports
+
+When you receive a folder export (a ZIP of multiple strategies):
+
+1. Extract the ZIP file to a temporary location
+2. The extracted folder contains individual `.ica` files
+3. Import each `.ica` file using any of the standard import methods
+4. Folder structure is not automatically recreated; organize imported strategies manually
+
+## Post-import steps
+
+After importing:
+
+1. **Verify the strategy**: Open it to ensure all elements loaded correctly
+2. **Check images**: Confirm that all images appear properly
+3. **Rename if needed**: Give the strategy a unique name if it conflicts with existing ones
+4. **Organize**: Move it to the appropriate folder in your library
+
+## Version compatibility
+
+Icarus maintains broad compatibility:
+
+- **Current version**: Full support for all features
+- **Recent versions**: Automatic migration with no data loss
+- **Very old versions**: Best-effort migration with possible feature differences
+
+The version number in the JSON indicates which Icarus version created the strategy. If you encounter issues with very old strategies, try opening them in an intermediate version first.

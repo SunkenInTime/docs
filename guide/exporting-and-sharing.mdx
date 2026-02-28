@@ -1,0 +1,165 @@
+---
+title: Exporting and sharing
+description: Share your strategies with teammates using Icarus export formats
+---
+
+## Export format
+
+Icarus strategies are exported as `.ica` files, which are ZIP archives containing:
+
+- A JSON file with all strategy data (pages, drawings, agents, abilities, etc.)
+- Image files referenced in the strategy
+- Metadata including version number and map information
+
+<Note>
+  The `.ica` format is proprietary to Icarus but uses standard ZIP compression, making it lightweight and portable.
+</Note>
+
+## Exporting a single strategy
+
+Share an individual strategy file:
+
+<Steps>
+  <Step title="Open or select the strategy">
+    Either open the strategy you want to export, or right-click it in your library.
+  </Step>
+  
+  <Step title="Choose export">
+    Select "Export" from the file menu or context menu.
+  </Step>
+  
+  <Step title="Choose save location">
+    A file picker opens. Choose where to save the `.ica` file and optionally rename it.
+  </Step>
+  
+  <Step title="Confirm export">
+    The strategy is packaged with all its data and images, then saved to your chosen location.
+  </Step>
+</Steps>
+
+<Tip>
+  Before exporting, Icarus automatically saves your strategy to ensure the export contains all recent changes.
+</Tip>
+
+## Exporting folders
+
+Export multiple strategies at once by exporting an entire folder:
+
+<Steps>
+  <Step title="Right-click a folder">
+    In your library, right-click the folder you want to export.
+  </Step>
+  
+  <Step title="Select export folder">
+    Choose "Export Folder" from the context menu.
+  </Step>
+  
+  <Step title="Choose save location">
+    Select where to save the `.zip` file containing all strategies in the folder.
+  </Step>
+  
+  <Step title="Wait for completion">
+    All strategies in the folder and its subfolders are packaged into individual `.ica` files, then bundled into a single ZIP archive.
+  </Step>
+</Steps>
+
+The folder export preserves your folder structure:
+
+- Each strategy becomes a `.ica` file
+- Folders become directories in the ZIP
+- Nested folders are preserved
+- Duplicate folder names get numbered suffixes
+
+<Warning>
+  Large folders with many strategies and images can take significant time to export. The export process creates temporary files during packaging.
+</Warning>
+
+## File naming and sanitization
+
+When exporting, Icarus sanitizes file names:
+
+- Invalid characters (`< > : " / \ | ? *`) are replaced with underscores
+- Empty names become "untitled"
+- Duplicate names in the same export get numbered suffixes
+
+This ensures exported files work across all operating systems.
+
+## Sharing strategies
+
+Once exported, share your `.ica` files with teammates:
+
+- **Direct file sharing**: Send via Discord, email, cloud storage, or USB drive
+- **Team drives**: Store in shared folders like Google Drive or Dropbox
+- **Version control**: Track changes to strategies in Git (though binary diffs are not meaningful)
+
+## Legacy format support
+
+Icarus maintains backward compatibility:
+
+- Old strategies without the pages system are automatically migrated on import
+- Legacy image embedding is converted to the modern file-based system
+- Version numbers track format changes
+- Strategies from older Icarus versions open seamlessly
+
+<Note>
+  The current version number is stored in `Settings.versionNumber`. Strategies are migrated to the latest version when opened.
+</Note>
+
+## Export data structure
+
+The JSON inside an `.ica` file contains:
+
+```json
+{
+  "versionNumber": "42",
+  "mapData": "Ascent",
+  "pages": [
+    {
+      "id": "uuid-here",
+      "sortIndex": "0",
+      "name": "Page 1",
+      "drawingData": [...],
+      "agentData": [...],
+      "abilityData": [...],
+      "textData": [...],
+      "imageData": [...],
+      "utilityData": [...],
+      "isAttack": "true",
+      "settings": {...},
+      "lineUpData": [...]
+    }
+  ]
+}
+```
+
+## Technical details
+
+### Image handling
+
+Images are stored efficiently:
+
+- Original images are saved in the strategy's support directory
+- Image IDs reference files, not embedded data (except on web)
+- Unused images are cleaned up when loading strategies
+- Export includes only referenced images
+
+### ZIP structure
+
+An exported `.ica` file contains:
+
+```
+strategy-name.ica
+├── strategy-name.json (the main data)
+├── image-uuid-1.png
+├── image-uuid-2.jpg
+└── (additional images...)
+```
+
+### Compression
+
+The ZIP format provides:
+
+- Efficient compression of JSON text data
+- Already-compressed images stored without re-compression
+- Fast random access to individual files
+- Wide compatibility across platforms

@@ -1,0 +1,136 @@
+---
+title: Pages and navigation
+description: Use multiple pages to break down complex strategies into sequential steps
+---
+
+## Understanding pages
+
+Each strategy can contain multiple pages that represent different stages or variations of your tactic. Pages work like slides in a presentation:
+
+- Each page has its own set of agents, abilities, drawings, and utilities
+- Pages are ordered sequentially with a sort index
+- Only one page is active at a time
+- Switching pages preserves all elements on each page
+
+<Note>
+  When you create a new strategy, it starts with a single page called "Page 1". The first page is set to attack side by default.
+</Note>
+
+## Adding pages
+
+Create additional pages to show progression or variations:
+
+<Steps>
+  <Step title="Open the pages panel">
+    Click the pages bar at the bottom of the screen to expand the full pages list.
+  </Step>
+  
+  <Step title="Add a new page">
+    Click the `+` button in the pages panel. A new page is created with the next sequential number.
+  </Step>
+  
+  <Step title="Customize the new page">
+    The new page inherits settings and elements from the previous page, making it easy to show progression.
+  </Step>
+</Steps>
+
+<Tip>
+  New pages copy all elements from the last page in your strategy, giving you a starting point to build from.
+</Tip>
+
+## Navigating between pages
+
+Switch between pages using multiple methods:
+
+### Keyboard shortcuts
+
+- **Forward (next page)**: Press `A`
+- **Backward (previous page)**: Press `D`
+- Navigation wraps around: going forward from the last page jumps to the first
+
+### Pages panel
+
+1. Expand the pages bar by clicking the arrow icon
+2. Click any page in the list to switch to it
+3. The active page is highlighted with a colored background
+
+### Animated transitions
+
+When switching pages, Icarus animates the transition:
+
+- Elements that exist on both pages move smoothly to their new positions
+- Elements only on the previous page fade out
+- Elements only on the next page fade in
+- The animation duration is 1 second
+
+<Note>
+  During page transitions, the main view is temporarily hidden while the animated overlay plays. This ensures smooth, flicker-free transitions.
+</Note>
+
+## Managing pages
+
+### Renaming pages
+
+Give your pages descriptive names:
+
+1. Expand the pages panel
+2. Click the edit icon next to any page
+3. Enter a new name and press Enter
+4. The name appears in the collapsed pages bar when that page is active
+
+### Reordering pages
+
+Change the sequence of your pages:
+
+1. Expand the pages panel
+2. Click and drag any page to a new position
+3. The sort order updates automatically
+4. Keyboard navigation follows the new order
+
+<Tip>
+  Use drag-and-drop reordering to adjust your strategy flow without recreating pages.
+</Tip>
+
+### Deleting pages
+
+Remove pages you no longer need:
+
+1. Expand the pages panel
+2. Click the delete icon next to the page
+3. Confirm the deletion in the dialog
+
+<Warning>
+  You cannot delete the last remaining page in a strategy. Every strategy must have at least one page. Deleted pages cannot be recovered.
+</Warning>
+
+If you delete the currently active page, Icarus automatically switches to the first page in the list.
+
+## Page-specific settings
+
+Each page stores its own configuration:
+
+- **Attack/Defense side**: Toggle between attacker and defender perspective
+- **Strategy settings**: Agent visibility, utility display preferences
+- **All elements**: Agents, abilities, drawings, text, images, and utilities
+- **Line-ups**: Associated position and ability line-up data
+
+### Sharing settings between pages
+
+Pages inherit settings when created but remain independent afterward. To apply settings across multiple pages:
+
+1. Configure the first page as desired
+2. Create new pages (they copy the previous page's settings)
+3. Or manually update each existing page
+
+## Working with page data
+
+Pages are stored in the strategy file:
+
+- Each page has a unique ID and sort index
+- Page data is serialized to JSON for export
+- Images are stored in a shared folder per strategy
+- Switching pages flushes the current page to storage before loading the next
+
+<Note>
+  The coordinate system uses a 16:9 world space with normalized coordinates. Maps are centered with padding, and all element positions are transformed during migration.
+</Note>

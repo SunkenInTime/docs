@@ -1,0 +1,89 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Icarus",
+  "theme": "palm",
+  "colors": {
+    "primary": "#FF4655",
+    "light": "#FD4556",
+    "dark": "#FA3346"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/SunkenInTime/icarus"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/SunkenInTime/icarus"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/map-drawing",
+              "features/strategy-management",
+              "features/agents-and-abilities",
+              "features/lineups",
+              "features/folders-and-organization"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/creating-strategies",
+              "guide/drawing-tools",
+              "guide/pages-and-navigation",
+              "guide/exporting-and-sharing",
+              "guide/importing-strategies",
+              "guide/keyboard-shortcuts"
+            ]
+          },
+          {
+            "group": "Maps",
+            "pages": [
+              "maps/overview",
+              "maps/supported-maps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/setup",
+              "development/architecture",
+              "development/building"
+            ]
+          },
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "technical/state-management",
+              "technical/data-storage",
+              "technical/file-format",
+              "technical/migrations"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

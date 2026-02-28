@@ -1,0 +1,235 @@
+---
+title: Agents and abilities
+description: Place and manage agent positions and ability usage in your strategies
+---
+
+Icarus lets you position Valorant agents and their abilities on the map to visualize team compositions and ability setups.
+
+## Placing agents
+
+<Steps>
+  <Step title="Select an agent">
+    Choose from the full Valorant agent roster. Agents are displayed with their character portraits.
+  </Step>
+  
+  <Step title="Click on the map">
+    Place the agent at the desired position. The agent icon appears at that location.
+  </Step>
+  
+  <Step title="Adjust position">
+    Drag the agent to fine-tune placement. The position is tracked in normalized coordinates.
+  </Step>
+</Steps>
+
+### Agent states
+
+Toggle between agent states:
+
+- **Alive** - Default state, shows normal agent icon
+- **Dead** - Marked with visual indicator (e.g., X or skull)
+
+<Note>
+  Agent state toggling is useful for planning retakes or post-death scenarios.
+</Note>
+
+## Placing abilities
+
+Abilities can be placed to show skill usage:
+
+<Steps>
+  <Step title="Select an ability">
+    Choose from the agent's ability set:
+    - Basic ability (E)
+    - Signature ability (C/Q)
+    - Ultimate ability (X)
+  </Step>
+  
+  <Step title="Place on map">
+    Click where the ability should be used or land.
+  </Step>
+  
+  <Step title="Rotate if needed">
+    Some abilities support rotation (walls, smokes, etc.). Drag to adjust angle and length.
+  </Step>
+</Steps>
+
+### Ability types
+
+Different abilities have different visual representations:
+
+- **Square abilities** - Fixed-size abilities like Sage's Healing Orb
+- **Rotatable abilities** - Directional abilities like Viper's Poison Cloud
+- **Line abilities** - Walls and barriers like Phoenix's Blaze
+
+## Rotation and length
+
+For abilities that support it:
+
+### Rotating abilities
+
+<Steps>
+  <Step title="Select the ability">
+    Click on a placed ability to select it.
+  </Step>
+  
+  <Step title="Drag to rotate">
+    Move your mouse to adjust the angle. The ability rotates around its anchor point.
+  </Step>
+  
+  <Step title="Adjust length">
+    For line-based abilities, extend or shrink the visual representation.
+  </Step>
+</Steps>
+
+<Note>
+  Rotation is tracked in radians internally. The UI shows a visual preview while dragging.
+</Note>
+
+### Anchor points
+
+Abilities have specific anchor points for rotation:
+
+- **Center anchored** - Rotate around the center of the ability
+- **Edge anchored** - Rotate from one end (walls, etc.)
+
+The anchor point is calculated based on ability size and map scale.
+
+## Updating positions
+
+Reposition agents and abilities by dragging:
+
+1. **Drag to move** - Click and hold, then drag to a new position
+2. **Out of bounds deletion** - If dragged outside the map, the element is removed
+3. **Undo support** - Position changes are tracked in the action history
+
+<Warning>
+  Dragging an agent or ability outside the map boundaries automatically deletes it. Use undo if this was accidental.
+</Warning>
+
+## Removing agents and abilities
+
+### Manual removal
+
+- Select the element and press Delete
+- Right-click and choose "Remove"
+- Drag it off the map
+
+### Undo/redo
+
+All agent and ability actions support undo/redo:
+
+- **Addition** - Undo removes the element, redo restores it
+- **Position changes** - Undo/redo cycles through position history
+- **Rotation changes** - Each rotation adjustment can be undone
+
+## Switching sides
+
+When you switch between attack and defense, agents and abilities are automatically flipped:
+
+<Steps>
+  <Step title="Toggle side">
+    Click the "Switch Sides" button.
+  </Step>
+  
+  <Step title="Automatic mirroring">
+    All agents and abilities are flipped:
+    - X positions are mirrored horizontally
+    - Y positions are mirrored vertically
+    - Rotations are adjusted to maintain the same relative angles
+  </Step>
+  
+  <Step title="History is preserved">
+    Position history for undo/redo is also flipped, so you can still undo changes after switching sides.
+  </Step>
+</Steps>
+
+## Size customization
+
+Agent and ability sizes can be adjusted:
+
+### Agent size
+
+Change how large agent icons appear on the map:
+
+1. Open strategy settings
+2. Adjust the "Agent Size" slider
+3. All agents on the current page are resized
+
+### Ability size
+
+Similarly, ability icons can be resized:
+
+1. Adjust the "Ability Size" slider
+2. All abilities update immediately
+
+<Note>
+  Size settings are saved per strategy. Different strategies can use different icon sizes.
+</Note>
+
+## Action tracking
+
+Every agent and ability action is logged:
+
+### Action types
+
+- **Addition** - Creating a new agent or ability
+- **Deletion** - Removing an element
+- **Edit** - Moving, rotating, or modifying an element
+
+### Action groups
+
+Actions are organized by type:
+
+- `ActionGroup.agent` - All agent-related actions
+- `ActionGroup.ability` - All ability-related actions
+
+This enables selective undo/redo by action type.
+
+## Data persistence
+
+Agents and abilities are stored as JSON:
+
+### Agent data
+
+```json
+{
+  "type": "jett",
+  "position": {"dx": 450.0, "dy": 320.0},
+  "state": "alive",
+  "id": "uuid-here"
+}
+```
+
+### Ability data
+
+```json
+{
+  "type": "jett",
+  "abilityType": "smoke",
+  "position": {"dx": 500.0, "dy": 400.0},
+  "rotation": 1.57,
+  "length": 50.0,
+  "id": "uuid-here"
+}
+```
+
+## Best practices
+
+<Tip>
+  Use different agent states to show sequencing:
+  1. Place all agents alive for the initial setup
+  2. Duplicate the page
+  3. Mark casualties and show the adjusted positions
+</Tip>
+
+### Performance
+
+- Limit the number of abilities on a single page for clarity
+- Use rotation only when necessary (simpler abilities render faster)
+- Remove unused agents and abilities before exporting
+
+### Visual clarity
+
+- Don't overlap agents and abilities unless showing stacking
+- Use drawings to connect related elements (e.g., arrow from agent to ability target)
+- Adjust icon sizes based on map complexity

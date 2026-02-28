@@ -1,0 +1,315 @@
+---
+title: Architecture
+description: Understanding Icarus's architecture and design patterns
+---
+
+Icarus follows a clean, layered architecture using Flutter best practices with Riverpod for state management and Hive for local persistence.
+
+## Application Initialization
+
+The app bootstraps in `lib/main.dart:36`:
+
+<Steps>
+  <Step title="Initialize Flutter bindings">
+    ```dart
+    WidgetsFlutterBinding.ensureInitialized();
+    ```
+  </Step>
+
+  <Step title="Ensure single instance (Windows only)">
+    ```dart
+    await WindowsSingleInstance.ensureSingleInstance(
+      args,
+      'icarus_single_instance',
+      onSecondWindow: (args) => publishSecondInstanceArgs(args),
+    );
+    ```
+  </Step>
+
+  <Step title="Initialize Hive database">
+    ```dart
+    final dir = await getApplicationSupportDirectory();
+    await Hive.initFlutter(dir.path);
+    ```
+  </Step>
+
+  <Step title="Register Hive adapters">
+    ```dart
+    Hive.registerAdapters();
+    ```
+    
+    Adapters are auto-generated in `lib/hive/hive_registrar.g.dart`
+  </Step>
+
+  <Step title="Open Hive boxes">
+    ```dart
+    await Hive.openBox<StrategyData>(HiveBoxNames.strategiesBox);
+    await Hive.openBox<Folder>(HiveBoxNames.foldersBox);
+    ```
+  </Step>
+
+  <Step title="Migrate legacy data">
+    ```dart
+    await StrategyProvider.migrateAllStrategies();
+    ```
+  </Step>
+
+  <Step title="Launch the app with Riverpod">
+    ```dart
+    runApp(ProviderScope(child: MyApp(data: args)));
+    ```
+  </Step>
+</Steps>
+
+## State Management with Riverpod
+
+Icarus uses Riverpod's `Notifier` pattern for all state management. Providers are located in `lib/providers/`.
+
+### Key Providers
+
+#### StrategyProvider
+
+**File**: `lib/providers/strategy_provider.dart:172`
+
+Manages the current strategy's state, persistence, and multi-page navigation.
+
+```dart
+final strategyProvider = NotifierProvider<StrategyProvider, StrategyState>(
+  StrategyProvider.new
+);
+```
+
+Key responsibilities:
+- Loading/saving strategies to Hive
+- Managing active page state
+- Auto-save with debouncing
+- Import/export `.ica` files
+- Strategy duplication and deletion
+
+#### FolderProvider
+
+**File**: `lib/providers/folder_provider.dart:115`
+
+Manages the hierarchical folder structure for organizing strategies.
+
+```dart
+final folderProvider = NotifierProvider<FolderProvider, String?>(
+  FolderProvider.new
+);
+```
+
+Key responsibilities:
+- Creating/editing/deleting folders
+- Navigating folder hierarchy
+- Moving strategies between folders
+
+#### DrawingProvider
+
+**File**: `lib/providers/drawing_provider.dart`
+
+Manages canvas drawing elements (lines, free-form drawings, arrows).
+
+#### AgentProvider & AbilityProvider
+
+**Files**: `lib/providers/agent_provider.dart`, `lib/providers/ability_provider.dart`
+
+Manage placed Valorant agents and abilities on the strategy canvas.
+
+### State Flow Example
+
+When a user draws on the canvas:
+
+```mermaid
+graph LR
+    A[User draws] --> B[DrawingProvider updates]
+    B --> C[StrategyProvider.setUnsaved]
+    C --> D[Timer starts]
+    D --> E[Auto-save after 2s]
+    E --> F[Sync to Hive]
+```
+
+## Data Persistence with Hive
+
+Icarus uses Hive, a fast NoSQL database, for local storage.
+
+### Hive Boxes
+
+**File**: `lib/const/hive_boxes.dart:1`
+
+```dart
+class HiveBoxNames {
+  static const strategiesBox = "strategy_box";
+  static const foldersBox = "folder_box";
+}
+```
+
+### Hive Adapters
+
+Adapters are automatically generated using `@HiveType` annotations and `build_runner`.
+
+**Generated file**: `lib/hive/hive_registrar.g.dart`
+
+The generator creates type adapters for:
+- `StrategyData` - Complete strategy document
+- `StrategyPage` - Individual pages within a strategy
+- `Folder` - Folder metadata
+- `PlacedAgent`, `PlacedAbility`, `PlacedText`, etc. - Canvas elements
+- `DrawingElement` subtypes (Line, FreeDrawing)
+
+### Data Models
+
+#### StrategyData
+
+**File**: `lib/providers/strategy_provider.dart:40`
+
+The root data model for a strategy:
+
+```dart
+class StrategyData extends HiveObject {
+  final String id;
+  String name;
+  final int versionNumber;
+  final List<StrategyPage> pages;
+  final MapValue mapData;
+  final DateTime lastEdited;
+  final DateTime createdAt;
+  String? folderID;
+}
+```
+
+#### StrategyPage
+
+**File**: `lib/providers/strategy_page.dart`
+
+Each strategy contains multiple pages:
+
+```dart
+class StrategyPage {
+  final String id;
+  final String name;
+  final int sortIndex;
+  final List<DrawingElement> drawingData;
+  final List<PlacedAgent> agentData;
+  final List<PlacedAbility> abilityData;
+  final List<PlacedText> textData;
+  final List<PlacedImage> imageData;
+  final List<PlacedUtility> utilityData;
+  final bool isAttack;
+  final StrategySettings settings;
+}
+```
+
+#### Folder
+
+**File**: `lib/providers/folder_provider.dart:22`
+
+```dart
+class Folder extends HiveObject {
+  String name;
+  final String id;
+  final DateTime dateCreated;
+  String? parentID;  // null for root folders
+  IconData icon;
+  FolderColor color;
+  Color? customColor;
+}
+```
+
+## Auto-Save System
+
+**File**: `lib/providers/strategy_provider.dart:198`
+
+Icarus implements a debounced auto-save system:
+
+```dart
+void setUnsaved() async {
+  state = state.copyWith(isSaved: false);
+  _saveTimer?.cancel();
+  _saveTimer = Timer(Settings.autoSaveOffset, () async {
+    if (state.stratName == null) return;
+    await _performSave(state.id);
+  });
+}
+```
+
+The save operation:
+1. Debounces rapid edits with a timer (default: 2 seconds)
+2. Prevents concurrent saves with a lock
+3. Syncs the current page to Hive
+4. Updates the last edited timestamp
+
+## Multi-Page Navigation
+
+**File**: `lib/providers/strategy_provider.dart:481`
+
+Strategies support multiple pages with smooth transitions:
+
+```dart
+Future<void> setActivePage(String pageID) async {
+  if (pageID == activePageID) return;
+  
+  // Flush current page before switching
+  await _syncCurrentPageToHive();
+  
+  // Load new page data into providers
+  ref.read(agentProvider.notifier).fromHive(page.agentData);
+  ref.read(abilityProvider.notifier).fromHive(page.abilityData);
+  // ... other providers
+}
+```
+
+## Import/Export System
+
+**File**: `lib/providers/strategy_provider.dart:788`
+
+Strategies are exported as `.ica` files (ZIP archives containing JSON + images):
+
+<CodeGroup>
+```dart Export
+await zipStrategy(id: strategy.id, outputFilePath: outputFile);
+```
+
+```dart Import
+await _loadFromXFile(XFile(filePath));
+```
+</CodeGroup>
+
+The `.ica` format:
+- JSON file with strategy data
+- Embedded image files
+- Version number for migration support
+
+## Migration System
+
+**File**: `lib/providers/strategy_provider.dart:269`
+
+Icarus includes automatic data migration for backward compatibility:
+
+```dart
+static Future<void> migrateAllStrategies() async {
+  final box = Hive.box<StrategyData>(HiveBoxNames.strategiesBox);
+  for (final strat in box.values) {
+    final migrated = await migrateLegacyData(strat);
+    if (migrated != strat) {
+      await box.put(migrated.id, migrated);
+    }
+  }
+}
+```
+
+Migrations handle:
+- Legacy single-page strategies → multi-page format
+- Coordinate system updates (aspect ratio changes)
+- Ability positioning fixes
+
+## UI Layer
+
+The UI is built with:
+- **Shadcn UI**: Component library (buttons, dialogs, etc.)
+- **Custom Flutter widgets**: Canvas rendering, drag-and-drop
+- **Toastification**: User notifications
+
+Main screens:
+- `FolderNavigator` - Browse strategies and folders
+- `StrategyView` - Edit strategy canvas
+- `SettingsTab` - App configuration

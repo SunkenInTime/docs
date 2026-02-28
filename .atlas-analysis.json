@@ -1,0 +1,106 @@
+{
+  "projectType": "saas",
+  "projectName": "Icarus",
+  "projectDescription": "Interactive strategy creation tool for Valorant players with map drawing, line-ups, and local strategy management.",
+  "theme": "palm",
+  "primaryColor": "#FF4655",
+  "lightColor": "#FD4556",
+  "darkColor": "#FA3346",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/map-drawing",
+              "features/strategy-management",
+              "features/agents-and-abilities",
+              "features/lineups",
+              "features/folders-and-organization"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/creating-strategies",
+              "guide/drawing-tools",
+              "guide/pages-and-navigation",
+              "guide/exporting-and-sharing",
+              "guide/importing-strategies",
+              "guide/keyboard-shortcuts"
+            ]
+          },
+          {
+            "group": "Maps",
+            "pages": [
+              "maps/overview",
+              "maps/supported-maps"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/setup",
+              "development/architecture",
+              "development/building"
+            ]
+          },
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "technical/state-management",
+              "technical/data-storage",
+              "technical/file-format",
+              "technical/migrations"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive map drawing and annotations with multiple tools (lines, free drawing, arrows)",
+    "Agent positioning and ability placement for all Valorant agents",
+    "Multi-page strategy support with page transitions and animations",
+    "Local file storage using Hive database with folder organization",
+    "Strategy export/import with .ica file format supporting images and metadata",
+    "Line-up creation tool for ability placement and positioning",
+    "Custom image and text annotations on maps",
+    "Attack/defense side configuration per strategy page",
+    "Strategy versioning and automatic migration system",
+    "Desktop-focused UX with keyboard shortcuts and custom cursors"
+  ],
+  "publicApiSurface": [
+    "StrategyProvider - Core strategy workflow coordination and CRUD operations",
+    "StrategyData - Main data model for strategies with pages, map data, and metadata",
+    "StrategyPage - Individual page within a strategy with drawing and placement data",
+    "DrawingProvider - Manages drawing elements (lines, free drawing, arrows)",
+    "AgentProvider - Handles Valorant agent placement and management",
+    "AbilityProvider - Manages ability placements and attachments",
+    "MapProvider - Controls map selection and attack/defense modes",
+    "FolderProvider - Manages folder hierarchy and organization",
+    "TextProvider - Handles text annotations on maps",
+    "UtilityProvider - Manages utility placements (spike, etc.)",
+    "LineUpProvider - Coordinates line-up creation and management",
+    "PlacedImageProvider - Manages custom image placements",
+    "File format: .ica (ZIP archive with JSON + images)",
+    "Export/Import API for strategies and folders",
+    "Migration system for legacy strategy formats"
+  ]
+}

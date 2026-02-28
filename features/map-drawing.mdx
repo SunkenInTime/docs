@@ -1,0 +1,133 @@
+---
+title: Map drawing
+description: Draw tactical lines, arrows, and annotations on Valorant maps
+---
+
+The map drawing system lets you sketch strategic paths, mark positions, and annotate your plans directly on the map canvas. All drawings are vector-based and scale smoothly with zoom.
+
+## Drawing tools
+
+Icarus provides several drawing options:
+
+- **Free drawing** - Sketch freehand lines and paths
+- **Arrows** - Show movement direction or ability trajectories
+- **Dotted lines** - Indicate optional routes or timing sequences
+- **Color selection** - Choose from multiple colors to differentiate elements
+
+## Creating drawings
+
+<Steps>
+  <Step title="Select drawing mode">
+    Activate the drawing tool from the toolbar. You can toggle arrow tips and dotted line styles.
+  </Step>
+  
+  <Step title="Choose your color">
+    Pick a color that represents the type of information (movement, ability usage, danger zones, etc.).
+  </Step>
+  
+  <Step title="Draw on the map">
+    Click and drag to create your drawing. The system uses line smoothing for cleaner paths.
+  </Step>
+  
+  <Step title="Finish the stroke">
+    Release the mouse to complete the drawing. The line is automatically simplified using the Douglas-Peucker algorithm.
+  </Step>
+</Steps>
+
+<Note>
+  Drawings are stored as coordinate lists, not bitmaps. This means they remain crisp at any zoom level.
+</Note>
+
+## Line smoothing and simplification
+
+When you finish drawing, Icarus automatically:
+
+1. **Smooths the path** - Converts raw mouse input into smooth curves using quadratic Bezier interpolation
+2. **Simplifies points** - Reduces the number of points while preserving the shape (Douglas-Peucker algorithm with epsilon = 1.4)
+3. **Rebuilds for display** - Regenerates the visual path when you zoom or pan
+
+## Erasing drawings
+
+<Steps>
+  <Step title="Enable eraser mode">
+    Select the eraser tool from the toolbar.
+  </Step>
+  
+  <Step title="Click or drag over drawings">
+    Any drawing element you touch is deleted immediately. The eraser has a configurable hit radius.
+  </Step>
+</Steps>
+
+<Warning>
+  Erased drawings are removed permanently unless you undo immediately. Use undo/redo for safer editing.
+</Warning>
+
+## Drawing customization
+
+Each drawing supports:
+
+- **Solid or dotted lines** - Toggle between continuous and dashed strokes
+- **Arrow heads** - Add directional indicators to show movement or ability travel
+- **Custom colors** - Select from the color palette to match your team's conventions
+
+## Undo and redo
+
+Every drawing action is tracked:
+
+- **Undo** removes the most recent drawing
+- **Redo** restores an undone drawing
+- The action history is maintained per page
+
+## Technical details
+
+### Coordinate system
+
+Drawings use normalized coordinates (0-1000 height, 16:9 aspect ratio) rather than screen pixels. This ensures:
+
+- Drawings remain consistent across different window sizes
+- Map panning and zooming don't distort your annotations
+- Strategies can be shared between users with different screen resolutions
+
+### Bounding boxes
+
+Each drawing maintains a bounding box for efficient hit detection. When you erase, Icarus:
+
+1. Checks if the mouse is near the bounding box
+2. Only then calculates precise distance to line segments
+3. Deletes the drawing if any segment is within the eraser radius
+
+### Path rendering
+
+Drawings are rendered using Flutter's `Path` class:
+
+- Single-point drawings appear as small circles
+- Multi-point drawings use quadratic Bezier curves between points
+- Arrow heads are calculated based on the final segment angle
+- Dotted lines use a custom dash pattern
+
+## Best practices
+
+<Tip>
+  Use different colors for different types of information:
+  - **Red** for enemy positions or danger zones
+  - **Green** for safe rotations or friendly positions
+  - **Yellow** for ability usage or timing markers
+  - **White** for general annotations
+</Tip>
+
+### Performance
+
+The drawing system is optimized for large strategy boards:
+
+- Simplified paths reduce memory usage
+- Bounding box checks prevent unnecessary calculations
+- Paths are only rebuilt when the coordinate system changes
+
+### Cross-page consistency
+
+Drawings are stored per page. When switching pages, all drawings are:
+
+1. Saved to the current page
+2. Cleared from the canvas
+3. Loaded from the target page
+4. Rebuilt with the current coordinate transform
